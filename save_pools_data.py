@@ -100,11 +100,12 @@ pool1 = os.getenv("POOL1")
 pool2 = os.getenv("POOL2")
 
 client = MeteoraClient(user)
-data1 = client.get_positions(pool1)
-data2 = client.get_positions(pool2)
+#data1 = client.get_positions(pool1)
+#data2 = client.get_positions(pool2)
+pool = client.get_pool(pool1)
+print(pool)
 
-
-save_position(data1, pool="USDC-SOL")
-save_position(data2, pool="SPCX-USDC")
+""" save_position(data1, pool="USDC-SOL")
+save_position(data2, pool="SPCX-USDC") """
 print("All is OK")
 

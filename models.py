@@ -7,6 +7,48 @@ class TokenValue:
         self.usd = float(p.get("usd", 0))
         self.sol = float(p.get("amountSol", 0))
 
+class TokenInfo:
+
+    def __init__(self, p):
+        self.address = p.get("address")
+        self.name = p.get("name")
+        self.symbol = p.get("symbol")
+
+        self.decimals = int(p.get("decimals", 0))
+        self.is_verified = bool(p.get("is_verified", False))
+
+        self.holders = int(p.get("holders", 0))
+        self.freeze_authority_disabled = bool(p.get("freeze_authority_disabled", False))
+
+        self.total_supply = float(p.get("total_supply", 0))
+        self.price = float(p.get("price", 0))
+        self.market_cap = float(p.get("market_cap", 0))
+
+class PoolConfig:
+
+    def __init__(self, p):
+        self.bin_step = int(p.get("bin_step", 0))
+        self.base_fee_pct = float(p.get("base_fee_pct", 0))
+        self.max_fee_pct = float(p.get("max_fee_pct", 0))
+        self.protocol_fee_pct = float(p.get("protocol_fee_pct", 0))
+        self.collect_fee_mode = int(p.get("collect_fee_mode", 0))
+
+class PoolMetrics:
+
+    def __init__(self, p):
+        self.m30 = float(p.get("30m", 0))
+        self.h1 = float(p.get("1h", 0))
+        self.h2 = float(p.get("2h", 0))
+        self.h4 = float(p.get("4h", 0))
+        self.h12 = float(p.get("12h", 0))
+        self.h24 = float(p.get("24h", 0))
+
+class CumulativeMetrics:
+
+    def __init__(self, p):
+        self.volume = float(p.get("volume", 0))
+        self.fees = float(p.get("fees", 0))
+
 class Amounts:
 
     def __init__(self, p):
@@ -99,7 +141,52 @@ class MeteoraPosition:
 class MeteoraPool:
 
     def __init__(self, data):
-        
+        self.address = data["address"]
+        self.name = data["name"]
+        self.token_x = TokenInfo(data.get("token_x", {}))
+        self.token_y = TokenInfo(data.get("token_y", {}))
+        self.reserve_x = data["reserve_x"]
+        self.reserve_y = data["reserve_y"]
+        self.token_x_amount = data["token_x_amount"]
+        self.token_y_amount = data["token_y_amount"]
+        self.created_at = data["created_at"]
+        self.reward_mint_x = data["reward_mint_x"]
+        self.reward_mint_y = data["reward_mint_y"]
+        self.pool_config = PoolConfig(data.get("pool_config", {}))
+        self.dynamic_fee_pct = float(data["dynamic_fee_pct"])
+        self.tvl = float(data["tvl"])
+        self.current_price = float(data["current_price"])
+        self.apr =  float(data["apr"])
+        self.apy = float(data["apy"])
+        self.has_farm = bool(data["has_farm"])
+        self.farm_apr = float(data["farm_apr"])
+        self.farm_apy = float(data["farm_apy"])
+        self.volume = PoolMetrics(data.get("volume", {}))
+        self.fees = PoolMetrics(data.get("fees", {}))
+        self.protocol_fees = PoolMetrics(data.get("protocol_fees", {}))
+        self.fee_tvl_ratio = PoolMetrics(data.get("fee_tvl_ratio", {}))
+        self.cumulative_metrics = CumulativeMetrics(data.get("cumulative_metrics", {}))
+        self.is_blacklisted = bool(data["is_blacklisted"])
+        self.launchpad = data["launchpad"]
+        self.tags = list(data["tags"])
+
+    def __repr__(self):
+        farm = "FARM" if self.has_farm else "NO_FARM"
+        status = "BLACKLISTED" if self.is_blacklisted else "OK"
+
+        return (
+            f"MeteoraPool("
+            f"name={self.name}, "
+            f"status={status}, "
+            f"farm={farm}, "
+            f"tvl=${self.tvl:,.2f}, "
+            f"price={self.current_price:.6f}, "
+            f"apr={self.apr:.2%}, "
+            f"apy={self.apy:.2%}, "
+            f"fee24h=${self.fees.h24:.2f}, "
+            f"vol24h=${self.volume.h24:.2f}, "
+            f"dyn_fee={self.dynamic_fee_pct:.2f}%)"
+    )
 
 class MeteoraPoolData:
 
@@ -143,8 +230,11 @@ class MeteoraClient:
         pool_data.raise_for_status()
         return MeteoraPoolData(pool_data.json())
     
-    def get_pool(self, pool: str):
-        pass
+    def get_pool(self, pool: str)-> MeteoraPool:
+        url = f"https://dlmm.datapi.meteora.ag/pools/{pool}"
+        pool_data = self.session.get(url, timeout=10)
+        pool_data.raise_for_status()
+        return MeteoraPool(pool_data.json())
 
     
         
