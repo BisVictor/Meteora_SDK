@@ -1,0 +1,117 @@
+{
+  "tokenX": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "tokenY": "So11111111111111111111111111111111111111112",
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20,
+  "hasNext": false,
+  "positions": [
+    {
+      "positionAddress": "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq",
+      "minPrice": "0.008326310756697663",
+      "maxPrice": "0.016379703382430486",
+      "lowerBinId": 213,
+      "upperBinId": 281,
+      "poolActiveBinId": 268,
+      "isOutOfRange": false,
+      "poolActivePrice": "0.014392232749317767",
+      "feePerTvl24h": "0.17015136321235708",
+      "isClosed": false,
+      "createdAt": 1777143845,
+      "closedAt": null,
+      "pnlUsd": "1.8696733974661583",
+      "pnlSol": "3.3647918184854575",
+      "pnlPctChange": "0.09881020380308785",
+      "pnlSolPctChange": "14.167421585331835",
+      "allTimeDeposits": {
+        "tokenX": {
+          "amount": "1832.8907490000001",
+          "usd": "1826.4465497653046",
+          "amountSol": "22.982660344978616"
+        },
+        "tokenY": {
+          "amount": "0.767545705",
+          "usd": "65.74001144461245",
+          "amountSol": "0.767545705"
+        },
+        "total": {
+          "usd": "1892.1865612099168",
+          "sol": "23.750206049978615"
+        }
+      },
+      "allTimeWithdrawals": {
+        "tokenX": {
+          "amount": "0",
+          "usd": "0",
+          "amountSol": "0"
+        },
+        "tokenY": {
+          "amount": "0",
+          "usd": "0",
+          "amountSol": "0"
+        },
+        "total": {
+          "usd": "0",
+          "sol": "0"
+        }
+      },
+      "allTimeFees": {
+        "tokenX": {
+          "amount": "5.027497",
+          "usd": "5.033292083698338",
+          "amountSol": "0.061707508731924064"
+        },
+        "tokenY": {
+          "amount": "0.060713394",
+          "usd": "4.952205196327489",
+          "amountSol": "0.060713394000000004"
+        },
+        "total": {
+          "usd": "9.985497280025827",
+          "sol": "0.12242090273192406"
+        }
+      },
+      "unrealizedPnl": {
+        "balances": 1818.93471719849,
+        "balancesSol": "26.03540827706728",
+        "balanceTokenX": {
+          "amount": "956.673646",
+          "usd": "956.3608707235677",
+          "amountSol": "13.688916646689398"
+        },
+        "balanceTokenY": {
+          "amount": "12.370416242",
+          "usd": "862.5738464749197",
+          "amountSol": "12.370416242"
+        },
+        "unclaimedFeeTokenX": {
+          "amount": "32.100801",
+          "usd": "32.09030595088011",
+          "amountSol": "0.45932611504275056"
+        },
+        "unclaimedFeeTokenY": {
+          "amount": "0.473917962",
+          "usd": "33.04571417798981",
+          "amountSol": "0.473917962"
+        },
+        "unclaimedRewardTokenX": {
+          "amount": "0",
+          "usd": "0",
+          "amountSol": "0"
+        },
+        "unclaimedRewardTokenY": {
+          "amount": "0",
+          "usd": "0",
+          "amountSol": "0"
+        }
+      }
+    }
+  ],
+  "tokenXPrice": "0.9996770628662748",
+  "tokenYPrice": "69.86388297972866",
+  "rewardTokenX": "11111111111111111111111111111111",
+  "rewardTokenY": "11111111111111111111111111111111",
+  "rewardTokenXPrice": "0",
+  "rewardTokenYPrice": "0",
+  "solPrice": "69.86388297972866"
+}
