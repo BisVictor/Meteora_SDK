@@ -55,6 +55,26 @@ class MeteoraPosition:
         self.allTimeFees = Amounts(p.get("allTimeFees", {}))
         self.unrealizedPnl = UnrealizedPnl(p.get("unrealizedPnl", {}))
 
+    @property
+    def total_current_balance_usd(self):
+        return (self.unrealizedPnl.balances
+                + self.unrealizedPnl.unclaimedFeeTokenX.usd
+                + self.unrealizedPnl.unclaimedFeeTokenY.usd
+                + self.allTimeFees.total_usd)
+    
+    @property
+    def total_current_balance_sol(self):
+        return (self.unrealizedPnl.balancesSol
+                + self.unrealizedPnl.unclaimedFeeTokenX.sol 
+                + self.unrealizedPnl.unclaimedFeeTokenY.sol 
+                + self.allTimeFees.total_sol)
+    
+    @property
+    def rewards_usd(self):
+        return (self.unrealizedPnl.unclaimedRewardTokenX.usd 
+                + self.unrealizedPnl.unclaimedRewardTokenY.usd)
+    
+
 class MeteoraPoolData:
 
     def __init__(self, data):

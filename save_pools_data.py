@@ -81,13 +81,13 @@ def save_position(meteora_data, pool):
                 #Current_depositSOL
                 round(position.unrealizedPnl.balancesSol, 2),
                 #Total_current_balanceUsd
-                round(position.unrealizedPnl.balances + position.unrealizedPnl.unclaimedFeeTokenX.usd + position.unrealizedPnl.unclaimedFeeTokenY.usd + position.allTimeFees.total_usd, 2),
+                round(position.total_current_balance_usd, 2),
                 #Total_current_balanceSOL
-                round(position.unrealizedPnl.balancesSol + position.unrealizedPnl.unclaimedFeeTokenX.sol + position.unrealizedPnl.unclaimedFeeTokenY.sol + position.allTimeFees.total_sol, 2),
+                round(position.total_current_balance_sol, 2),
                 #withdraw_feesUsd
                 round(position.allTimeFees.total_usd, 2),
                 #rewardsUsd
-                round(position.unrealizedPnl.unclaimedRewardTokenX.usd + position.unrealizedPnl.unclaimedRewardTokenY.usd, 2),
+                round(position.rewards_usd, 2),
                 #depositUsd
                 round(position.allTimeDeposits.total_usd, 2),
                 #depositSOL
