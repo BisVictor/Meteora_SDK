@@ -34,7 +34,7 @@ class UnrealizedPnl:
 class MeteoraPosition:
 
     def __init__(self, p):
-        self.positionAddress = p.get("positionAddress", None)
+        self.address = p.get("positionAddress", None)
         self.minPrice =  float(p.get("minPrice", 0))
         self.maxPrice =  float(p.get("maxPrice", 0))
         self.lowerBinId = p.get("lowerBinId", 0)
@@ -55,6 +55,14 @@ class MeteoraPosition:
         self.allTimeFees = Amounts(p.get("allTimeFees", {}))
         self.unrealizedPnl = UnrealizedPnl(p.get("unrealizedPnl", {}))
 
+    def __repr__(self):
+        return (
+            f"MeteoraPosition("
+            f"position={self.address}, "
+            f"pnl={self.pnlUsd:.2f}, "
+            f"balance={self.total_current_balance_usd:.2f})"
+        )
+
     @property
     def total_current_balance_usd(self):
         return (self.unrealizedPnl.balances
@@ -74,6 +82,24 @@ class MeteoraPosition:
         return (self.unrealizedPnl.unclaimedRewardTokenX.usd 
                 + self.unrealizedPnl.unclaimedRewardTokenY.usd)
     
+    @property
+    def fees_usd(self):
+        return (
+            self.unrealizedPnl.unclaimedFeeTokenX.usd
+            + self.unrealizedPnl.unclaimedFeeTokenY.usd
+        )
+    
+    @property
+    def fees_sol(self):
+        return (
+            self.unrealizedPnl.unclaimedFeeTokenX.sol
+            + self.unrealizedPnl.unclaimedFeeTokenY.sol
+        )
+    
+class MeteoraPool:
+
+    def __init__(self, data):
+        
 
 class MeteoraPoolData:
 
@@ -94,15 +120,31 @@ class MeteoraPoolData:
         self.positions = [MeteoraPosition(p) for p in data["positions"]]
 
 class MeteoraClient:
-    
-    def __init__(self, wallet):
+    """Client for Meteora DLMM API."""
+    def __init__(self, wallet: str):
         self.wallet = wallet
+        self.session = requests.Session()
 
-    def get_position(self, pool):
+    def get_positions(self, pool: str)-> MeteoraPoolData:
+        """
+            Returns all DLMM positions for the current wallet in the specified pool.
+
+            Parameters
+            ----------
+            pool : str
+                Pool address.
+
+            Returns
+            -------
+            MeteoraPoolData
+        """
         url = f"https://dlmm.datapi.meteora.ag/positions/{pool}/pnl?user={self.wallet}"
-        request = requests.get(url)
-        return MeteoraPoolData(request.json())
+        pool_data = self.session.get(url, timeout=10)
+        pool_data.raise_for_status()
+        return MeteoraPoolData(pool_data.json())
     
+    def get_pool(self, pool: str):
+        pass
 
     
         

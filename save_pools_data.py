@@ -35,7 +35,7 @@ HEADER = [
     "depositSOL",
 ]   
 
-def save_position(meteora_data, pool):
+def save_position(meteora_data: MeteoraPoolData, pool: str)-> None:
     file_exists = os.path.isfile(FILE_NAME)
 
     with open(FILE_NAME, "a", newline="", encoding="utf-8") as f:
@@ -52,8 +52,8 @@ def save_position(meteora_data, pool):
                 int(datetime.now().timestamp()),
                 #createdAt
                 position.createdAt,
-                #position
-                position.positionAddress,
+                #position addres
+                position.address,
                 #pool
                 pool,
                 #SOLprice
@@ -100,8 +100,8 @@ pool1 = os.getenv("POOL1")
 pool2 = os.getenv("POOL2")
 
 client = MeteoraClient(user)
-data1 = client.get_position(pool1)
-data2 = client.get_position(pool2)
+data1 = client.get_positions(pool1)
+data2 = client.get_positions(pool2)
 
 
 save_position(data1, pool="USDC-SOL")
