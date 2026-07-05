@@ -1,4 +1,17 @@
+#  Необходимо сделать:
+#  ▢ client.get_pools(page=1)
+#  ▢ client.search_pools("SOL")
+#  ▢ client.get_top_pools(sort="tvl")
+#  ▢ client.get_top_pools(sort="apr")
+#  ▢ client.get_wallet_positions()      # все позиции кошелька
+#  ▢ client.get_pool_history()          # если API поддерживает
+#  ▢ client.get_bin_array()
+#  ▢ client.get_transactions()
+
+
 import requests
+
+BASE_URL = "https://dlmm.datapi.meteora.ag"
 
 class TokenValue:
 
@@ -212,6 +225,17 @@ class MeteoraClient:
         self.wallet = wallet
         self.session = requests.Session()
 
+    def _get(self, endpoint: str) -> dict:
+        try:
+            url = f"{BASE_URL}/{endpoint}"
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+
+            return response.json()
+
+        except:
+            print("Request error")  
+
     def get_positions(self, pool: str)-> MeteoraPoolData:
         """
             Returns all DLMM positions for the current wallet in the specified pool.
@@ -224,17 +248,16 @@ class MeteoraClient:
             Returns
             -------
             MeteoraPoolData
-        """
-        url = f"https://dlmm.datapi.meteora.ag/positions/{pool}/pnl?user={self.wallet}"
-        pool_data = self.session.get(url, timeout=10)
-        pool_data.raise_for_status()
-        return MeteoraPoolData(pool_data.json())
+        """        
+        return MeteoraPoolData(self._get(f"positions/{pool}/pnl?user={self.wallet}"))
     
     def get_pool(self, pool: str)-> MeteoraPool:
-        url = f"https://dlmm.datapi.meteora.ag/pools/{pool}"
-        pool_data = self.session.get(url, timeout=10)
-        pool_data.raise_for_status()
-        return MeteoraPool(pool_data.json())
+        
+        return MeteoraPool((self._get(f"pools/{pool}")))
+    
+    def get_pools(self, page: int, page_size: int, query: str, sort_by: str, filter_by: str):
+        
+        url = f"{BASE_URL}/pools?page={page}&page_size={page_size}&query={query}sort_by={sort_by}&filter_by={filter_by}"
 
     
         
