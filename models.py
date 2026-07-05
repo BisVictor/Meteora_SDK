@@ -1,14 +1,3 @@
-#  Необходимо сделать:
-#  ▢ client.get_pools(page=1)
-#  ▢ client.search_pools("SOL")
-#  ▢ client.get_top_pools(sort="tvl")
-#  ▢ client.get_top_pools(sort="apr")
-#  ▢ client.get_wallet_positions()      # все позиции кошелька
-#  ▢ client.get_pool_history()          # если API поддерживает
-#  ▢ client.get_bin_array()
-#  ▢ client.get_transactions()
-
-
 import requests
 
 BASE_URL = "https://dlmm.datapi.meteora.ag"
@@ -190,16 +179,33 @@ class MeteoraPool:
         return (
             f"MeteoraPool("
             f"name={self.name}, "
-            f"status={status}, "
-            f"farm={farm}, "
+            f"status={status}, "            
             f"tvl=${self.tvl:,.2f}, "
             f"price={self.current_price:.6f}, "
             f"apr={self.apr:.2%}, "
             f"apy={self.apy:.2%}, "
             f"fee24h=${self.fees.h24:.2f}, "
             f"vol24h=${self.volume.h24:.2f}, "
-            f"dyn_fee={self.dynamic_fee_pct:.2f}%)"
+            f"dyn_fee={self.dynamic_fee_pct:.2f}%, "
+            f"farm={farm})"
+            "\n"
     )
+
+class MeteoraPools:
+
+    def __init__(self, data):
+        self.total = int(data.get("total", 0))
+        self.pages = int(data.get("pages", 0))
+        self.current_page = int(data.get("current_page", 0))
+        self.page_size = int(data.get("page_size", 0))
+
+        self.data = [MeteoraPool(pool) for pool in data.get("data", [])]
+
+    def __repr__(self):
+        return(
+            f"total pools: {self.total}, page {self.current_page} of {self.pages} (page size: {self.page_size})\n"
+            f"{self.data}"
+        )
 
 class MeteoraPoolData:
 
@@ -225,16 +231,13 @@ class MeteoraClient:
         self.wallet = wallet
         self.session = requests.Session()
 
-    def _get(self, endpoint: str) -> dict:
-        try:
-            url = f"{BASE_URL}/{endpoint}"
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
+    def _get(self, endpoint: str, params: dict | None = None) -> dict:
+        
+        url = f"{BASE_URL}/{endpoint}"       
+        response = self.session.get(url, timeout=10, params=params)      
+        response.raise_for_status()
 
-            return response.json()
-
-        except:
-            print("Request error")  
+        return response.json()
 
     def get_positions(self, pool: str)-> MeteoraPoolData:
         """
@@ -255,9 +258,59 @@ class MeteoraClient:
         
         return MeteoraPool((self._get(f"pools/{pool}")))
     
-    def get_pools(self, page: int, page_size: int, query: str, sort_by: str, filter_by: str):
+    def get_pools(self,
+                  page: int = 1,
+                  page_size: int = 10,
+                  query: str | None = None,
+                  sort_by: str | None = None,
+                  filter_by: str | None = None):
         
-        url = f"{BASE_URL}/pools?page={page}&page_size={page_size}&query={query}sort_by={sort_by}&filter_by={filter_by}"
+        params = {
+            "page": page,
+            "page_size": page_size,
+        }
 
+        if query:
+            params["query"] = query
+        if sort_by:
+            params["sort_by"] = sort_by
+        if filter_by:
+            params["filter_by"] = filter_by
+                             
+        return MeteoraPools(self._get("pools", params=params))
+
+        
+        
+
+#  Необходимо сделать:
+#  ☑ client.get_pools(page=1)
+#  ☑  client.search_pools("SOL")
+#  ▢ client.get_top_pools(sort="tvl")
+#  ▢ client.get_top_pools(sort="apr")
+#  ▢ client.get_wallet_positions()      # все позиции кошелька
+#  ▢ client.get_pool_history()          # если API поддерживает
+#  ▢ client.get_bin_array()
+#  ▢ client.get_transactions()
+
+    def search_pools(self,
+                    query: str | None = None,
+                    page: int = 1,
+                    page_size: int = 10,
+                    ):
+        
+        return self.get_pools(page=page, page_size=page_size, query=query)
     
+    def get_top_pools(self,
+                    query: str | None = None,
+                    page: int = 1,
+                    page_size: int = 10,
+                    sort_by="tvl:desc"
+                    ):
+        
+        return self.get_pools(page=page, page_size=page_size, query=query, sort_by=sort_by)
+
+
+
+        
+        
         
