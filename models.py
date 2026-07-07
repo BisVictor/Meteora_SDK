@@ -1,4 +1,5 @@
 import requests
+from enum import Enum
 
 BASE_URL = "https://dlmm.datapi.meteora.ag"
 
@@ -8,6 +9,15 @@ class TokenValue:
         self.amount = float(p.get("amount", 0))
         self.usd = float(p.get("usd", 0))
         self.sol = float(p.get("amountSol", 0))
+
+class SortDirection(str, Enum):
+    ASC = "asc"
+    DESC = "desc"
+
+class ActivePoolSort(str, Enum):
+    CURRENT_BALANCES = "current_balances"
+    UNCLAIMED_FEE = "unclaimed_fee"
+    FEE_PER_TVL24H = "fee_per_tvl24h"
 
 class TokenInfo:
 
@@ -140,6 +150,53 @@ class MeteoraPosition:
             + self.unrealizedPnl.unclaimedFeeTokenY.sol
         )
     
+class ActivePositionsTotal:
+
+    def __init__(self, p):
+        self.totalPositions = int(p.get("totalPositions", 0))
+        self.balances = float(p.get("balances", 0))
+        self.balancesSol = float(p.get("balancesSol", 0))
+        self.unclaimedFees = float(p.get("unclaimedFees", 0))
+        self.unclaimedFeesSol = float(p.get("unclaimedFeesSol", 0))
+        self.pnl = float(p.get("pnl", 0))
+        self.pnlSol = float(p.get("pnlSol", 0))
+        self.pnlPctChange = float(p.get("pnlPctChange", 0))
+        self.pnlSolPctChange = float(p.get("pnlPctChange", 0))
+
+class ActivePositionsPools:
+
+    def __init__(self, p):
+        self.poolAddress = str(p.get("poolAddress", ""))
+        self.binStep = int(p.get("binStep", 0))
+        self.baseFee = float(p.get("baseFee", 0))
+        self.collectFeeMode = float(p.get("collectFeeMode", 0))
+        self.tokenXMint = str(p.get("tokenXMint", ""))
+        self.tokenYMint = str(p.get("tokenYMint", ""))
+        self.tokenXIcon = str(p.get("tokenXIcon", ""))
+        self.tokenYIcon = str(p.get("tokenYIcon", ""))
+        self.tokenX = str(p.get("tokenX", ""))
+        self.tokenY = str(p.get("tokenY", ""))
+        self.rewardX = float(p.get("rewardX") or 0)
+        self.rewardY = float(p.get("rewardY") or 0)
+        self.balances = float(p.get("balances", 0))
+        self.balancesSol = float(p.get("balancesSol", 0))
+        self.unclaimedFees = float(p.get("unclaimedFees", 0))
+        self.unclaimedFeesSol = float(p.get("unclaimedFeesSol", 0))
+        self.feePerTvl24h = float(p.get("feePerTvl24h", 0))
+        self.pnl = float(p.get("pnl", 0))
+        self.pnlSol = float(p.get("pnlSol", 0))
+        self.pnlPctChange = float(p.get("pnlPctChange", 0))
+        self.pnlSolPctChange = float(p.get("pnlSolPctChange", 0))
+        self.totalDeposit = float(p.get("totalDeposit", 0))
+        self.totalDepositSol = float(p.get("totalDepositSol", 0))
+        self.openPositionCount = int(p.get("openPositionCount", 0))
+        self.listPositions = list(p.get("listPositions", []))
+        self.outOfRange = bool(p.get("outOfRange", False))
+        self.positionsOutOfRange = list(p.get("positionsOutOfRange", []))
+        self.poolPrice = float(p.get("poolPrice", 0))
+        self.poolStateUpdatedAtSlot = int(p.get("poolStateUpdatedAtSlot", 0))
+        self.poolStateUpdatedAtBlockTime = int(p.get("poolStateUpdatedAtBlockTime", 0))
+    
 class MeteoraPool:
 
     def __init__(self, data):
@@ -206,6 +263,29 @@ class MeteoraPools:
             f"total pools: {self.total}, page {self.current_page} of {self.pages} (page size: {self.page_size})\n"
             f"{self.data}"
         )
+
+class ActivePositions:
+
+    def __init__(self, data):
+        self.page = int(data["page"])
+        self.pageSize = int(data["pageSize"])
+        self.hasNext = bool(data["hasNext"])
+        self.totalCount = int(data["totalCount"])
+        self.totalPositions = int(data["totalPositions"])
+        self.total = ActivePositionsTotal(data.get("total", {}))
+
+        self.solPrice = float(data["solPrice"])
+        self.pools = [ActivePositionsPools(i) for i in data.get("pools", [])]
+
+    def __repr__(self):
+        return (
+            f"Total positions: {round(self.totalPositions, 2)}\n"
+            f"Balance: {round(self.total.balances, 2)}\n"
+            f"Balance SOL: {round(self.total.balancesSol, 2)}\n"
+            f"Unclaimed fees: {round(self.total.unclaimedFees, 2)}\n"
+            f"Unclaimed fees SOL: {round(self.total.unclaimedFeesSol, 2)}\n"
+        )
+
 
 class MeteoraPoolData:
 
@@ -278,14 +358,31 @@ class MeteoraClient:
             params["filter_by"] = filter_by
                              
         return MeteoraPools(self._get("pools", params=params))
+    
+    def get_active_pools(self,
+                         page: int = 1,
+                         page_size: int = 10,
+                         sort_direction: SortDirection | None = None,
+                         sort_by: ActivePoolSort | None = None
+                         )-> ActivePositions:
+        
+        params = {
+            "page": page,
+            "page_size": page_size,
+        }
+        if sort_direction:
+            params["sort_direction"] = sort_direction.value
+        if sort_by:
+            params["sort_by"] = sort_by.value
 
+        return ActivePositions(self._get(f"portfolio/open?user={self.wallet}"))
         
         
 
 #  Необходимо сделать:
 #  ☑ client.get_pools(page=1)
 #  ☑  client.search_pools("SOL")
-#  ▢ client.get_top_pools(sort="tvl")
+#  ☑ client.get_top_pools(sort="tvl")
 #  ▢ client.get_top_pools(sort="apr")
 #  ▢ client.get_wallet_positions()      # все позиции кошелька
 #  ▢ client.get_pool_history()          # если API поддерживает
@@ -302,9 +399,9 @@ class MeteoraClient:
     
     def get_top_pools(self,
                     query: str | None = None,
+                    sort_by="tvl:desc",
                     page: int = 1,
-                    page_size: int = 10,
-                    sort_by="tvl:desc"
+                    page_size: int = 10                    
                     ):
         
         return self.get_pools(page=page, page_size=page_size, query=query, sort_by=sort_by)
