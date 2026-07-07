@@ -362,10 +362,16 @@ class MeteoraClient:
     def get_active_pools(self,
                          page: int = 1,
                          page_size: int = 10,
-                         sort_direction: SortDirection | None = None,
-                         sort_by: ActivePoolSort | None = None
+                         sort_direction: SortDirection | str | None = None,
+                         sort_by: ActivePoolSort | str | None = None
                          )-> ActivePositions:
         
+        if isinstance(sort_direction, str):
+            sort_direction = SortDirection(sort_direction)
+
+        if isinstance(sort_by, str):
+            sort_by = ActivePoolSort(sort_by)
+
         params = {
             "page": page,
             "page_size": page_size,
@@ -375,7 +381,7 @@ class MeteoraClient:
         if sort_by:
             params["sort_by"] = sort_by.value
 
-        return ActivePositions(self._get(f"portfolio/open?user={self.wallet}"))
+        return ActivePositions(self._get(f"portfolio/open?user={self.wallet}", params=params))
         
         
 
@@ -384,19 +390,12 @@ class MeteoraClient:
 #  ☑  client.search_pools("SOL")
 #  ☑ client.get_top_pools(sort="tvl")
 #  ▢ client.get_top_pools(sort="apr")
-#  ▢ client.get_wallet_positions()      # все позиции кошелька
+#  ☑ client.get_wallet_positions()      # все позиции кошелька
 #  ▢ client.get_pool_history()          # если API поддерживает
 #  ▢ client.get_bin_array()
 #  ▢ client.get_transactions()
 
-    def search_pools(self,
-                    query: str | None = None,
-                    page: int = 1,
-                    page_size: int = 10,
-                    ):
-        
-        return self.get_pools(page=page, page_size=page_size, query=query)
-    
+   
     def get_top_pools(self,
                     query: str | None = None,
                     sort_by="tvl:desc",
