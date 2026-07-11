@@ -19,50 +19,86 @@ class  MeteoraRPC:
         pubkey = Pubkey.from_string(pubkey)
         return self.client.get_balance(pubkey)
 
-def u64(data, offset):
-    return int.from_bytes(
-        data[offset:offset+8],
-        "little"
-    )
+class Reader:
 
-def read_pubkey(data, offset):
-    return str(
-        Pubkey.from_bytes(
-            data[offset:offset+32]
+    def __init__(self, data: bytes):
+        self.data = data
+        self.offset = 0
+
+    def u8(self):
+        #u8
+        value = self.data[self.offset]
+        self.offset += 1
+        return value
+
+    def u16(self):
+        value = struct.unpack_from("<H", self.data, self.offset)[0]
+        self.offset += 2
+        return value
+
+    def u32(self):
+        #u32
+        value = struct.unpack_from("<I", self.data, self.offset)[0]
+        self.offset += 4
+        return value
+
+    def u64(self):
+        value = struct.unpack_from("<Q", self.data, self.offset)[0]
+        self.offset += 8
+        return value
+
+    def i32(self):
+        value = struct.unpack_from("<i", self.data, self.offset)[0]
+        self.offset += 4
+        return value
+
+    def i64(self):
+        value = struct.unpack_from("<q", self.data, self.offset)[0]
+        self.offset += 8
+        return value
+    
+    def u128(self):
+        value = int.from_bytes(
+            self.data[self.offset:self.offset+16],
+            byteorder="little",
+            signed=False,
         )
-    )
+        self.offset += 16
+        return value
 
+    def pubkey(self):
+        value = self.data[self.offset:self.offset + 32]
+        self.offset += 32
+        return value
+    
+    def pubkey(self):
+        value = Pubkey.from_bytes(
+            self.data[self.offset:self.offset + 32]
+        )
+        self.offset += 32
+        return value
+    
+    def skip(self, n):
+        self.offset += n
+
+    def tell(self):
+        return self.offset
+    
+    def boolean(self):
+        return bool(self.u8())
+    
 rpc = MeteoraRPC(URL)
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL my
-account = rpc.get_account("AUgbdzNob9S8MiVHm4Qruqz3VsZGoqtMZnSzv45juDbL") #meteora USDC-SOL 4-bin
+account = rpc.get_account("HPQxZ91SJ62AJ7WBSqop2Ttkz1j6cwGNFtxvFdysyjb7") #meteora 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
-print(account)
+#print(account)
 
 data = bytes(account.value.data)
 
-print("-"*50)
-print("owner:", account.value.owner)
-print("size :", len(data))
-print("disc :", data[:8].hex())
-
-for offset in range(8, 88, 8):
-    print(offset, u64(data, offset))
-    
-print("-"*50)
-
-for offset in range(88, 880, 32):
-    print(offset, read_pubkey(data, offset))
+r = Reader(data)
+r.offset = 8
+base_factor = r.u16()
+filter_period = r.u16()
 
 
 
-#print(datetime.utcfromtimestamp(1782069297))
-
-
-print("binStep     :", struct.unpack("<H", data[80:82])[0])
-print("flags       :", struct.unpack("<H", data[82:84])[0])
-print("fee_factor  :", struct.unpack("<I", data[84:88])[0])
-
-print("active_id   :", struct.unpack("<i", data[48:52])[0])
-
-print("state_a     :", struct.unpack("<I", data[72:76])[0])
-print("state_b     :", struct.unpack("<i", data[76:80])[0])

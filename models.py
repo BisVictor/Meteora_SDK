@@ -405,8 +405,3 @@ class MeteoraClient:
         
         return self.get_pools(page=page, page_size=page_size, query=query, sort_by=sort_by)
 
-
-
-        
-        
-        
