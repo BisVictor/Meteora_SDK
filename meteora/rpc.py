@@ -73,6 +73,14 @@ class Reader:
         self.offset += 32
         return value
     
+    def array(self, func, count):
+        result = []
+
+        for _ in range(count):
+            result.append(func())
+        
+        return result
+    
     def skip(self, n):
         self.offset += n
 
@@ -147,6 +155,58 @@ class ProtocolFee:
             f"amount_x: {self.amount_x}\n"
             f"amount_y: {self.amount_y}\n"
         )
+
+class RewardInfo:
+
+    def __init__(self, r: Reader):
+        self.mint = r.pubkey()  
+        self.vault = r.pubkey()  
+        self.funder = r.pubkey()  
+        self.reward_duration = r.u64()
+        self.reward_duration_end = r.u64()
+        self.reward_rate = r.u128()
+        self.last_update_time = r.u64()
+        self.cumulative_seconds_with_empty_liquidity_reward = r.u64()
+
+    def __repr__(self):
+        return (
+            "\n___ Reward ___\n"
+            f"mint: {self.mint}\n"
+            f"vault: {self.vault}\n"
+            f"funder: {self.funder}\n"
+            f"reward_duration: {self.reward_duration}\n"
+            f"reward_duration_end: {self.reward_duration_end}\n"
+            f"reward_rate: {self.reward_rate}\n"
+            f"last_update_time: {self.last_update_time}\n"
+            f"cumulative_seconds_with_empty_liquidity_reward: "
+            f"{self.cumulative_seconds_with_empty_liquidity_reward}"
+        )
+
+
+class RewardInfos:
+
+    def __init__(self, r: Reader):
+        self.zero = RewardInfo(r)
+        self.one = RewardInfo(r)
+
+    def __repr__(self):
+        return (
+            "\n___ Reward Infos ___\n"
+            f"zero: {self.zero}\n"
+            f"one: {self.one}\n"
+        )
+    
+class BinArrayBitmap:
+
+    def __init__(self, r: Reader):
+
+        self.values = r.array(r.u64, 16)
+
+    def __repr__(self):
+        return (
+            "\n___ Bin Array Bitmap ___\n"
+            f"values: {self.values}\n"
+        )
        
     
 class LbPair:
@@ -174,6 +234,22 @@ class LbPair:
         self.reserve_y = r.pubkey()
         self.protocol_fee = ProtocolFee(r)
         self._padding1 = r.skip(32)
+        self.reward_infos = RewardInfos(r)
+        self.oracle = r.pubkey()
+        self.bin_array_bitmap = BinArrayBitmap(r)
+        self.last_updated_at = r.i64()
+        self._padding2 = r.skip(32)
+        self.pre_activation_swap_address = r.pubkey()
+        self.base_key = r.pubkey()
+        self.activation_point = r.u64()
+        self.pre_activation_duration = r.u64()
+        self._padding3 = r.skip(8)
+        self._padding4 = r.u64()
+        self.creator = r.pubkey()
+        self.token_mint_x_program_flag = r.u8()
+        self.token_mint_y_program_flag = r.u8()
+        self.version = r.u8()
+        self._reserved = r.skip(21)
         
 
 
@@ -200,6 +276,18 @@ class LbPair:
             f"reserve_x: {self.reserve_x}\n"
             f"reserve_y: {self.reserve_y}\n"
             f"protocol_fee: {self.protocol_fee}\n"
+            f"reward_infos: {self.reward_infos}\n"
+            f"oracle: {self.oracle}\n"
+            f"bin_array_bitmap: {self.bin_array_bitmap}\n"
+            f"last_updated_at: {self.last_updated_at}\n"
+            f"pre_activation_swap_address: {self.pre_activation_swap_address}\n"
+            f"base_key: {self.base_key}\n"
+            f"activation_point: {self.activation_point}\n"
+            f"pre_activation_duration: {self.pre_activation_duration}\n"
+            f"creator: {self.creator}\n"
+            f"token_mint_x_program_flag: {self.token_mint_x_program_flag}\n"
+            f"token_mint_y_program_flag: {self.token_mint_y_program_flag}\n"
+            f"version: {self.version}\n"
         )
 
     
