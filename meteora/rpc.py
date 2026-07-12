@@ -135,6 +135,18 @@ class  VariableParameters:
             f"last_update_timestamp: {self.last_update_timestamp}\n"
         )
 
+class ProtocolFee:
+
+    def __init__(self, r: Reader):
+        self.amount_x = r.u64()
+        self.amount_y = r.u64()
+
+    def __repr__(self):
+        return (
+            "\n___ Protocol Fee ___\n"
+            f"amount_x: {self.amount_x}\n"
+            f"amount_y: {self.amount_y}\n"
+        )
        
     
 class LbPair:
@@ -144,17 +156,52 @@ class LbPair:
         self.discriminator = r.i64()
         self.parameters = StaticParameters(r)
         self.v_parameters = VariableParameters(r)
+        self.bump_seed = r.u8()
+        self.bin_step_seed_0 = r.u8()
+        self.bin_step_seed_1 = r.u8()
+        self.pair_type = r.u8()
+        self.active_id = r.i32()
+        self.bin_step = r.u16()
+        self.status = r.u8()
+        self.require_base_factor_seed = r.u8()
+        self.base_factor_seed_0 = r.u8()
+        self.base_factor_seed_1 = r.u8()
+        self.activation_type = r.u8()
+        self.creator_pool_on_off_control = r.u8()
+        self.token_x_mint = r.pubkey()
+        self.token_y_mint = r.pubkey()
+        self.reserve_x = r.pubkey()
+        self.reserve_y = r.pubkey()
+        self.protocol_fee = ProtocolFee(r)
+        self._padding1 = r.skip(32)
+        
+
 
     def __repr__(self):
-        return(
-            f"discriminator: {self.discriminator}"
-            f"parameters: {self.parameters}"
-            f"v_parameters: {self.v_parameters}"
+        return (
+            "\n___ Lb Pair ___\n"
+            f"discriminator: {self.discriminator}\n"
+            f"parameters: {self.parameters}\n"
+            f"v_parameters: {self.v_parameters}\n"
+            f"bump_seed: {self.bump_seed}\n"
+            f"bin_step_seed_0: {self.bin_step_seed_0}\n"
+            f"bin_step_seed_1: {self.bin_step_seed_1}\n"
+            f"pair_type: {self.pair_type}\n"
+            f"active_id: {self.active_id}\n"
+            f"bin_step: {self.bin_step}\n"
+            f"status: {self.status}\n"
+            f"require_base_factor_seed: {self.require_base_factor_seed}\n"
+            f"base_factor_seed_0: {self.base_factor_seed_0}\n"
+            f"base_factor_seed_1: {self.base_factor_seed_1}\n"
+            f"activation_type: {self.activation_type}\n"
+            f"creator_pool_on_off_control: {self.creator_pool_on_off_control}\n"
+            f"token_x_mint: {self.token_x_mint}\n"
+            f"token_y_mint: {self.token_y_mint}\n"
+            f"reserve_x: {self.reserve_x}\n"
+            f"reserve_y: {self.reserve_y}\n"
+            f"protocol_fee: {self.protocol_fee}\n"
         )
 
-
-
-        
     
 rpc = MeteoraRPC(URL)
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL my
