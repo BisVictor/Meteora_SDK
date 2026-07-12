@@ -235,9 +235,9 @@ class LbPair:
 
     def __init__(self, data):
         r = Reader(data)
-        self.discriminator = r.bytes(8)
-        """ if self.discriminator != DISCRIMINATOR:
-            raise ValueError("Not a Meteora LbPair account") """
+        self.discriminator = r.u64()
+        if self.discriminator != DISCRIMINATOR:
+            raise ValueError("Not a Meteora LbPair account")
 
         self.parameters = StaticParameters(r)
         self.v_parameters = VariableParameters(r)
