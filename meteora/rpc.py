@@ -4,7 +4,10 @@ from solders.pubkey import Pubkey
 import struct
 
 URL = "https://api.mainnet-beta.solana.com"
-#pubkey = "6NYPquPNfZALPDCVLTjADvzVsarRriGi1HS26ydo6s2C"
+
+DISCRIMINATOR = 986681623081716513
+#DISCRIMINATOR = b'!\x0b1b\xb5e\xb1\r'
+
 
 class  MeteoraRPC:
 
@@ -12,7 +15,9 @@ class  MeteoraRPC:
         self.client = Client(rpc_url)
 
     def get_account(self, pubkey):
-        pubkey = Pubkey.from_string(pubkey)
+        if isinstance(pubkey, str):
+            pubkey = Pubkey.from_string(pubkey)
+
         return self.client.get_account_info(pubkey)
     
     def get_balance(self, pubkey):
@@ -73,6 +78,11 @@ class Reader:
         self.offset += 32
         return value
     
+    def bytes(self, n):
+        value = self.data[self.offset:self.offset+n]
+        self.offset += n
+        return value
+    
     def array(self, func, count):
         result = []
 
@@ -89,6 +99,18 @@ class Reader:
     
     def boolean(self):
         return bool(self.u8())
+    
+class TokenMint:
+
+    def __init__(self, data: bytes):
+        data = Reader(data)
+
+        self.mint_authority_option = data.u32()
+        self.mint_authority  = data.pubkey()
+        self.supply = data.u64()
+        self.decimal = data.u8()
+        self.is_initialized = data.u8()
+  
     
 class StaticParameters():
 
@@ -213,7 +235,10 @@ class LbPair:
 
     def __init__(self, data):
         r = Reader(data)
-        self.discriminator = r.i64()
+        self.discriminator = r.bytes(8)
+        """ if self.discriminator != DISCRIMINATOR:
+            raise ValueError("Not a Meteora LbPair account") """
+
         self.parameters = StaticParameters(r)
         self.v_parameters = VariableParameters(r)
         self.bump_seed = r.u8()
@@ -250,7 +275,27 @@ class LbPair:
         self.token_mint_y_program_flag = r.u8()
         self.version = r.u8()
         self._reserved = r.skip(21)
-        
+
+    #def load_tokens(self, rpc):
+
+        self._client = MeteoraRPC(URL)
+        self._token_x_mint = self._client.get_account(self.token_x_mint)
+        self._token_y_mint = self._client.get_account(self.token_y_mint)
+
+        self.x_mint = TokenMint(self._token_x_mint.value.data)
+        self.y_mint = TokenMint(self._token_y_mint.value.data)
+
+
+
+    @property
+    def price(self):
+        raw_price = (
+            1 + self.bin_step / 10000
+        ) ** self.active_id
+
+        price = raw_price * 10 ** (self.x_mint.decimal - self.y_mint.decimal)
+
+        return price
 
 
     def __repr__(self):
@@ -292,15 +337,24 @@ class LbPair:
 
     
 rpc = MeteoraRPC(URL)
-#account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL my
-account = rpc.get_account("HPQxZ91SJ62AJ7WBSqop2Ttkz1j6cwGNFtxvFdysyjb7") #meteora 
+account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
+#account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
+#account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
+#account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 #print(account)
 
-data = bytes(account.value.data)
 
+#print(account)
+#print("-"*50)
+
+data = bytes(account.value.data)
 lb = LbPair(data)
 print(lb)
+print(lb.price)
+
+
+
 
 
 
