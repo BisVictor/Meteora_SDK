@@ -65,12 +65,7 @@ class Reader:
         )
         self.offset += 16
         return value
-
-    def pubkey(self):
-        value = self.data[self.offset:self.offset + 32]
-        self.offset += 32
-        return value
-    
+   
     def pubkey(self):
         value = Pubkey.from_bytes(
             self.data[self.offset:self.offset + 32]
@@ -87,6 +82,80 @@ class Reader:
     def boolean(self):
         return bool(self.u8())
     
+class StaticParameters():
+
+    def __init__(self, r: Reader):
+        self.base_factor = r.u16()
+        self.filter_period = r.u16()
+        self.decay_period = r.u16()
+        self.reduction_factor = r.u16()
+        self.variable_fee_control = r.u32()
+        self.max_volatility_accumulator = r.u32()
+        self.min_bin_id = r.i32()
+        self.max_bin_id = r.i32()
+        self.protocol_share = r.u16()
+        self.base_fee_power_factor = r.u8()
+        self.function_type = r.u8()
+        self.collect_fee_mode = r.u8()
+        self._padding = r.skip(3)
+
+    def __repr__(self):
+        return (
+            "\n___ StaticParameters ___\n"
+            f"base_factor: {self.base_factor}\n"
+            f"filter_period: {self.filter_period}\n"
+            f"decay_period: {self.decay_period}\n"
+            f"reduction_factor: {self.reduction_factor}\n"
+            f"variable_fee_control: {self.variable_fee_control}\n"
+            f"max_volatility_accumulator: {self.max_volatility_accumulator}\n"
+            f"min_bin_id: {self.min_bin_id}\n"
+            f"max_bin_id: {self.max_bin_id}\n"
+            f"protocol_share: {self.protocol_share}\n"
+            f"base_fee_power_factor: {self.base_fee_power_factor}\n"
+            f"function_type: {self.function_type}\n"
+            f"collect_fee_mode: {self.collect_fee_mode}\n"
+        )
+    
+class  VariableParameters:
+
+    def __init__(self, r: Reader):
+        self.volatility_accumulator = r.u32()
+        self.volatility_reference = r.u32()
+        self.index_reference = r.i32()
+        self._padding = r.skip(4)
+        self.last_update_timestamp = r.i64()
+        self._padding1 = r.skip(8)
+
+    def __repr__(self):
+        return (
+            "\n___ Variable Parameters ___\n"
+            f"volatility_accumulator: {self.volatility_accumulator}\n"
+            f"volatility_reference: {self.volatility_reference}\n"
+            f"index_reference: {self.index_reference}\n"
+            f"last_update_timestamp: {self.last_update_timestamp}\n"
+        )
+
+       
+    
+class LbPair:
+
+    def __init__(self, data):
+        r = Reader(data)
+        self.discriminator = r.i64()
+        self.parameters = StaticParameters(r)
+        self.v_parameters = VariableParameters(r)
+
+    def __repr__(self):
+        return(
+            f"discriminator: {self.discriminator}"
+            f"parameters: {self.parameters}"
+            f"v_parameters: {self.v_parameters}"
+        )
+
+
+
+        
+    
 rpc = MeteoraRPC(URL)
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL my
 account = rpc.get_account("HPQxZ91SJ62AJ7WBSqop2Ttkz1j6cwGNFtxvFdysyjb7") #meteora 
@@ -95,10 +164,8 @@ account = rpc.get_account("HPQxZ91SJ62AJ7WBSqop2Ttkz1j6cwGNFtxvFdysyjb7") #meteo
 
 data = bytes(account.value.data)
 
-r = Reader(data)
-r.offset = 8
-base_factor = r.u16()
-filter_period = r.u16()
+lb = LbPair(data)
+print(lb)
 
 
 
