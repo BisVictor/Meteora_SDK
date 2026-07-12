@@ -115,7 +115,7 @@ class TokenMint:
 class StaticParameters():
 
     def __init__(self, r: Reader):
-        self.base_factor = r.u16()
+        self.base_factor = r.u16() # for fee_rate
         self.filter_period = r.u16()
         self.decay_period = r.u16()
         self.reduction_factor = r.u16()
@@ -245,8 +245,8 @@ class LbPair:
         self.bin_step_seed_0 = r.u8()
         self.bin_step_seed_1 = r.u8()
         self.pair_type = r.u8()
-        self.active_id = r.i32()
-        self.bin_step = r.u16()
+        self.active_id = r.i32() #for pool price
+        self.bin_step = r.u16() #for pool price, fee_rate
         self.status = r.u8()
         self.require_base_factor_seed = r.u8()
         self.base_factor_seed_0 = r.u8()
@@ -276,26 +276,75 @@ class LbPair:
         self.version = r.u8()
         self._reserved = r.skip(21)
 
-    #def load_tokens(self, rpc):
-
-        self._client = MeteoraRPC(URL)
-        self._token_x_mint = self._client.get_account(self.token_x_mint)
-        self._token_y_mint = self._client.get_account(self.token_y_mint)
+    def _load_tokens(self, rpc):
+        
+        self._token_x_mint = rpc.get_account(self.token_x_mint)
+        self._token_y_mint = rpc.get_account(self.token_y_mint)
 
         self.x_mint = TokenMint(self._token_x_mint.value.data)
         self.y_mint = TokenMint(self._token_y_mint.value.data)
 
+        return self.x_mint, self.y_mint
 
 
     @property
     def price(self):
+        x_mint, y_mint = self._load_tokens(rpc)
         raw_price = (
             1 + self.bin_step / 10000
         ) ** self.active_id
 
-        price = raw_price * 10 ** (self.x_mint.decimal - self.y_mint.decimal)
+        price = raw_price * 10 ** (x_mint.decimal - y_mint.decimal)
 
         return price
+    
+    @property
+    def fee_rate(self):
+
+        base_fee = (
+            self.parameters.base_factor *
+            self.bin_step
+        )
+
+        return base_fee / 1_000_000
+    
+    @property
+    def variable_fee(self):
+
+        v = self.v_parameters.volatility_accumulator
+
+        return (
+            (
+                self.bin_step *
+                v
+            ) ** 2 *
+            self.parameters.variable_fee_control
+        ) / 1_00_000_000_000_000_000
+
+
+    @property
+    def total_fee(self):
+
+        return (
+            self.fee_rate +
+            self.variable_fee
+        )
+    
+    @property
+    def min_price(self):
+
+        return (
+            1 + self.bin_step / 10000
+        ) ** self.parameters.min_bin_id
+    
+    @property
+    def max_price(self):
+
+        return (
+            1 + self.bin_step / 10000
+        ) ** self.parameters.max_bin_id
+    
+
 
 
     def __repr__(self):
@@ -337,8 +386,8 @@ class LbPair:
 
     
 rpc = MeteoraRPC(URL)
-account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
-#account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
+#account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
+account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
@@ -352,6 +401,12 @@ data = bytes(account.value.data)
 lb = LbPair(data)
 print(lb)
 print(lb.price)
+print(lb.fee_rate)
+#print(lb.variable_fee)
+#print(lb.total_fee)
+print(lb.min_price)
+print(lb.max_price)
+
 
 
 
