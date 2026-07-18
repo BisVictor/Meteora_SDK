@@ -1,6 +1,9 @@
 from solana.rpc.api import Client
 from solders.pubkey import Pubkey
 
+from helpers import bin_id_to_bin_array_index
+from pda import derive_bin_array_pda, PROGRAM_ID
+
 import struct
 
 URL = "https://api.mainnet-beta.solana.com"
@@ -330,7 +333,7 @@ class LbPair:
             self.variable_fee
         )
     
-    @property
+    """     @property
     def min_price(self):
 
         return (
@@ -343,7 +346,7 @@ class LbPair:
         return (
             1 + self.bin_step / 10000
         ) ** self.parameters.max_bin_id
-    
+     """
 
 
 
@@ -383,6 +386,11 @@ class LbPair:
             f"token_mint_y_program_flag: {self.token_mint_y_program_flag}\n"
             f"version: {self.version}\n"
         )
+    
+class BinArray:
+
+    def __init__(self, data):
+        pass
 
     
 rpc = MeteoraRPC(URL)
@@ -401,13 +409,12 @@ data = bytes(account.value.data)
 lb = LbPair(data)
 print(lb)
 print(lb.price)
-print(lb.fee_rate)
+#print(lb.fee_rate)
 #print(lb.variable_fee)
 #print(lb.total_fee)
-print(lb.min_price)
-print(lb.max_price)
-
-
+bin_array_index = bin_id_to_bin_array_index(lb.active_id)
+pda, bump = derive_bin_array_pda("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR", bin_array_index)
+print(pda, bump)
 
 
 
