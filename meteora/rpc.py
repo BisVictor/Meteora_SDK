@@ -23,6 +23,12 @@ class  MeteoraRPC:
 
         return self.client.get_account_info(pubkey)
     
+    def get_lb_pair(self, pubkey: str | Pubkey):
+        if isinstance(pubkey, str):
+            pubkey = Pubkey.from_string(pubkey)
+        response = self.client.get_account_info(pubkey)
+        return LbPair(response.value.data, pubkey, self)       
+    
     def get_balance(self, pubkey):
         pubkey = Pubkey.from_string(pubkey)
         return self.client.get_balance(pubkey)
@@ -232,13 +238,47 @@ class BinArrayBitmap:
             "\n___ Bin Array Bitmap ___\n"
             f"values: {self.values}\n"
         )
-       
+
+class Bin:
+
+    def __init__(self, r: Reader):        
+        self.amount_x = r.u64()
+        self.amount_y = r.u64()
+        self.price = r.u128()
+        self.liquidity_supply = r.u128()
+        self.fulfilled_order_amount_x = r.u64()
+        self.fulfilled_order_amount_y = r.u64()
+        self.limit_order_fee_ask_side = r.u64()
+        self.limit_order_fee_bid_side = r.u64()
+        self.fee_amount_x_per_token_stored = r.u128()
+        self.fee_amount_y_per_token_stored = r.u128()
+        self.open_order_amount = r.u64()
+        self.total_processing_order_amount = r.u64()
+        self.processed_order_remaining_amount = r.u64()
+        self.order_age = r.u32()
+        self.limit_order_ask_side = r.u8()
+        self.padding1 = r.skip(3)
+
+    def __repr__(self):
+        return (
+            f"amount_x: {self.amount_x}, "
+            f"amount_y: {self.amount_y}, "
+            f"price: {self.price}\n"
+        )
     
 class LbPair:
 
-    def __init__(self, data):
+    def __init__(self, data: bytes, address: str | Pubkey, client: MeteoraRPC):
         r = Reader(data)
+
+        if isinstance(address, str):
+            self.address = Pubkey.from_string(address)
+        
+        self.address = address
+        self.client = client
+
         self.discriminator = r.u64()
+
         if self.discriminator != DISCRIMINATOR:
             raise ValueError("Not a Meteora LbPair account")
 
@@ -248,7 +288,7 @@ class LbPair:
         self.bin_step_seed_0 = r.u8()
         self.bin_step_seed_1 = r.u8()
         self.pair_type = r.u8()
-        self.active_id = r.i32() #for pool price
+        self.active_id = r.i32() #for pool price, from bin id to bin array
         self.bin_step = r.u16() #for pool price, fee_rate
         self.status = r.u8()
         self.require_base_factor_seed = r.u8()
@@ -279,22 +319,29 @@ class LbPair:
         self.version = r.u8()
         self._reserved = r.skip(21)
 
-    def _load_tokens(self, rpc):
+    def _load_tokens(self):
         
-        self._token_x_mint = rpc.get_account(self.token_x_mint)
-        self._token_y_mint = rpc.get_account(self.token_y_mint)
+        self._token_x_mint = self.client.get_account(self.token_x_mint)
+        self._token_y_mint = self.client.get_account(self.token_y_mint)
 
         self.x_mint = TokenMint(self._token_x_mint.value.data)
         self.y_mint = TokenMint(self._token_y_mint.value.data)
 
         return self.x_mint, self.y_mint
+    
+    def get_bin_array(self):
+        """Выводит активный BinArray"""
+        bin_array_index = bin_id_to_bin_array_index(self.active_id)
+        pda, bump = derive_bin_array_pda(self.address, bin_array_index)
+        data_bin_array = self.client.get_account(pda)
 
+        return BinArray(data_bin_array.value.data)      
 
     @property
     def price(self):
-        x_mint, y_mint = self._load_tokens(rpc)
+        x_mint, y_mint = self._load_tokens()
         raw_price = (
-            1 + self.bin_step / 10000
+            1 + self.bin_step / 10_000
         ) ** self.active_id
 
         price = raw_price * 10 ** (x_mint.decimal - y_mint.decimal)
@@ -332,6 +379,10 @@ class LbPair:
             self.fee_rate +
             self.variable_fee
         )
+    
+    @property
+    def active_bin(self):
+        return self.active_id
     
     """     @property
     def min_price(self):
@@ -390,31 +441,48 @@ class LbPair:
 class BinArray:
 
     def __init__(self, data):
-        pass
+        r = Reader(data)
+        self.discriminator = r.u64()
+        self.index = r.i64()
+        self.version = r.u8()
+        self.padding1 = r.skip(7)
+        self.lb_pair = r.pubkey()
+        self.bins = [Bin(r) for _ in range(70)]
+    
+    def __repr__(self):
+        return(
+            f"index: {self.index}\n"
+            f"version: {self.version}\n"
+            f"lb_pair: {self.lb_pair}\n"
+            f"bins: {self.bins}\n"
+        )
 
     
 rpc = MeteoraRPC(URL)
+lb_pair = rpc.get_lb_pair("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR")
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
-account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
+#account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 #print(account)
 
-
 #print(account)
 #print("-"*50)
 
-data = bytes(account.value.data)
-lb = LbPair(data)
-print(lb)
-print(lb.price)
+#data = bytes(account.value.data)
+#lb = LbPair(data, "HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR")
+#print(lb.active_bin)
+
+#print(lb.price)
 #print(lb.fee_rate)
 #print(lb.variable_fee)
 #print(lb.total_fee)
-bin_array_index = bin_id_to_bin_array_index(lb.active_id)
-pda, bump = derive_bin_array_pda("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR", bin_array_index)
-print(pda, bump)
+
+print(lb_pair.active_bin)
+print(lb_pair.price)
+print(lb_pair.get_bin_array())
+
 
 
 
