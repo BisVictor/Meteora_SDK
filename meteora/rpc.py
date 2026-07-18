@@ -319,23 +319,30 @@ class LbPair:
         self.version = r.u8()
         self._reserved = r.skip(21)
 
-    def _load_tokens(self):
-        
+    def _load_tokens(self):        
         self._token_x_mint = self.client.get_account(self.token_x_mint)
         self._token_y_mint = self.client.get_account(self.token_y_mint)
 
         self.x_mint = TokenMint(self._token_x_mint.value.data)
         self.y_mint = TokenMint(self._token_y_mint.value.data)
 
-        return self.x_mint, self.y_mint
+        return self.x_mint, self.y_mint   
     
-    def get_bin_array(self):
-        """Выводит активный BinArray"""
-        bin_array_index = bin_id_to_bin_array_index(self.active_id)
+    def get_bin_array(self, bin_id: int):
+        """Выводит BinArray по bin id"""
+        bin_array_index = bin_id_to_bin_array_index(bin_id)
         pda, bump = derive_bin_array_pda(self.address, bin_array_index)
         data_bin_array = self.client.get_account(pda)
 
         return BinArray(data_bin_array.value.data)      
+    
+    def get_bin(self, bin_id: int):
+        """Выводит Bin из массива BinArray"""
+        array = self.get_bin_array(bin_id)
+        index = bin_id % 70
+        if index < 0:
+            index += 70
+        return array.bins[index]
 
     @property
     def price(self):
@@ -459,7 +466,8 @@ class BinArray:
 
     
 rpc = MeteoraRPC(URL)
-lb_pair = rpc.get_lb_pair("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR")
+
+lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteora Meowpin-SOL Fee: 3.00% • Bin Step: 100
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
 #account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
@@ -481,7 +489,10 @@ lb_pair = rpc.get_lb_pair("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR")
 
 print(lb_pair.active_bin)
 print(lb_pair.price)
-print(lb_pair.get_bin_array())
+print(lb_pair.total_fee)
+print(lb_pair.parameters.base_fee_power_factor)
+print(lb_pair.get_bin(lb_pair.active_id))
+
 
 
 
