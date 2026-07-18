@@ -4,7 +4,7 @@ pools_addres.txt
 __pycache__/models.cpython-313.pyc
 plot.png
 meteora_positions.csv
-__pycache__/*
+meteora/__pycache__/*
+meteora/__pycache__/
 *.png
 *.csv
-
