@@ -1,10 +1,14 @@
 from solana.rpc.api import Client
 from solders.pubkey import Pubkey
+from dotenv import load_dotenv
+import os
 
 from helpers import bin_id_to_bin_array_index
-from pda import derive_bin_array_pda, PROGRAM_ID
+from pda import *
 
 import struct
+
+load_dotenv()
 
 URL = "https://api.mainnet-beta.solana.com"
 
@@ -27,7 +31,13 @@ class  MeteoraRPC:
         if isinstance(pubkey, str):
             pubkey = Pubkey.from_string(pubkey)
         response = self.client.get_account_info(pubkey)
-        return LbPair(response.value.data, pubkey, self)       
+        return LbPair(response.value.data, pubkey, self)     
+
+    def get_position(self, pubkey: str | Pubkey):
+        if isinstance(pubkey, str):
+              pubkey = Pubkey.from_string(pubkey)
+        response = self.client.get_account_info(pubkey)
+        return PositionV2(response.value.data)  
     
     def get_balance(self, pubkey):
         pubkey = Pubkey.from_string(pubkey)
@@ -266,6 +276,38 @@ class Bin:
             f"price: {self.price}\n"
         )
     
+class UserRewardInfo:
+
+    def __init__(self, r: Reader):
+        self.reward_per_token_completes_0 = r.u128()
+        self.reward_per_token_completes_1 = r.u128()
+        self.reward_pendings_0 = r.u64()
+        self.reward_pendings_1 = r.u64()
+    
+    def __repr__(self):
+        return(
+            f"reward_per_token_completes_0: {self.reward_per_token_completes_0},\n"
+            f"reward_per_token_completes_1: {self.reward_per_token_completes_1},\n"
+            f"reward_pendings_0: {self.reward_pendings_0},\n"
+            f"reward_pendings_1: {self.reward_pendings_1},\n"
+        )
+    
+class FeeInfo:
+
+    def __init__(self, r: Reader):
+        self.fee_x_per_token_complete = r.u128()
+        self.fee_y_per_token_complete = r.u128()
+        self.fee_x_pending = r.u64()
+        self.fee_y_pending = r.u64()
+
+    def __repr__(self):
+        return (
+            f"fee_x_per_token_complete: {self.fee_x_per_token_complete},\n"
+            f"fee_y_per_token_complete: {self.fee_y_per_token_complete},\n"
+            f"fee_x_pending: {self.fee_x_pending},\n"
+            f"fee_y_pending: {self.fee_y_pending},\n"
+        )
+    
 class LbPair:
 
     def __init__(self, data: bytes, address: str | Pubkey, client: MeteoraRPC):
@@ -463,16 +505,64 @@ class BinArray:
             f"lb_pair: {self.lb_pair}\n"
             f"bins: {self.bins}\n"
         )
+    
+class PositionV2:
+
+    def __init__(self, data):
+        r = Reader(data)
+        self.discriminator = r.u64()
+        self.lb_pair = r.pubkey()
+        self.owner = r.pubkey()
+        self.liquidity_shares = r.array(r.u128, 70)
+        self.reward_infos = [UserRewardInfo(r) for _ in range(70)]
+        self.fee_infos = [FeeInfo(r) for _ in range(70)]
+        self.lower_bin_id = r.i32()
+        self.upper_bin_id = r.i32()
+        self.last_updated_at = r.i64()
+        self.total_claimed_fee_x_amount = r.u64()
+        self.total_claimed_fee_y_amount = r.u64()
+        self.total_claimed_rewards_0 = r.u64()
+        self.total_claimed_rewards_1 = r.u64()
+        self.operator = r.pubkey()
+        self.lock_release_point = r.u64()
+        self.padding0 = r.skip(1)
+        self.fee_owner = r.pubkey()
+        self.version = r.u8()
+        self.permissionless_operation_bits = r.u8()
+        self.reserved = r.skip(85)
+
+    def __repr__(self):
+        return (
+            f"lb_pair: {self.lb_pair},\n"
+            f"owner: {self.owner},\n"
+            f"liquidity_shares: {self.liquidity_shares},\n"
+            #f"reward_infos: {self.reward_infos},\n"
+            #f"fee_infos: {self.fee_infos},\n"
+            f"lower_bin_id: {self.lower_bin_id},\n"
+            f"upper_bin_id: {self.upper_bin_id},\n"
+            f"last_updated_at: {self.last_updated_at},\n"
+            f"total_claimed_fee_x_amount: {self.total_claimed_fee_x_amount},\n"
+            f"total_claimed_fee_y_amount: {self.total_claimed_fee_y_amount},\n"
+            f"total_claimed_rewards_0: {self.total_claimed_rewards_0},\n"
+            f"total_claimed_rewards_1: {self.total_claimed_rewards_1},\n"
+            f"operator: {self.operator},\n"
+            f"lock_release_point: {self.lock_release_point},\n"
+            f"fee_owner: {self.fee_owner},\n"
+            f"version: {self.version},\n"
+            f"permissionless_operation_bits: {self.permissionless_operation_bits},\n"
+        )
 
     
 rpc = MeteoraRPC(URL)
 
-lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteora Meowpin-SOL Fee: 3.00% • Bin Step: 100
+#lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteora Meowpin-SOL Fee: 3.00% • Bin Step: 100
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
 #account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
+
+position = rpc.get_position("4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq")
 #print(account)
 
 #print(account)
@@ -487,15 +577,22 @@ lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteo
 #print(lb.variable_fee)
 #print(lb.total_fee)
 
-print(lb_pair.active_bin)
-print(lb_pair.price)
-print(lb_pair.total_fee)
-print(lb_pair.parameters.base_fee_power_factor)
-print(lb_pair.get_bin(lb_pair.active_id))
+#print(lb_pair.active_bin)
+#print(lb_pair.price)
+#print(lb_pair.total_fee)
+#print(lb_pair.parameters.base_fee_power_factor)
+#print(lb_pair.get_bin(lb_pair.active_id))
 
+#print(position)
 
+lb_pair = Pubkey.from_string("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+base = Pubkey.from_string("D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6")
 
+pda, bump = derive_position_pda(lb_pair=lb_pair,
+    base=base,
+    lower_bin_id=213,
+    width=69,
+)
 
-
-
+print(pda)
 
