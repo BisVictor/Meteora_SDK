@@ -39,6 +39,21 @@ def derive_position_pda(lb_pair: Pubkey,
 
     return pda, bump
 
+def derive_position_bin_data_pda(position: str | Pubkey):
+
+    if isinstance(position, str):
+        position = Pubkey.from_string(position)
+
+    pda, bump = Pubkey.find_program_address(
+        [
+            b"position_bin_data",
+            bytes(position),
+        ],
+        PROGRAM_ID,
+    )
+
+    return pda, bump
+
 #derive_position_pda()
 #derive_oracle_pda()
 #derive_bin_array_pda()

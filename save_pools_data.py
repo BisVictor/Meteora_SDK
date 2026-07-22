@@ -97,15 +97,15 @@ def save_position(meteora_data: MeteoraPoolData, pool: str)-> None:
 
 user = os.getenv("USER_PUBLIC_KEY")
 pool1 = os.getenv("POOL1")
-pool3 = os.getenv("POOL2")
+pool4 = os.getenv("POOL4")
 
 client = MeteoraClient(user)
 data1 = client.get_positions(pool1)
-data2 = client.get_positions(pool3)
+#data2 = client.get_positions(pool4)
 #temp1 = client.get_active_pools(page=1, page_size=10, sort_direction="desc", sort_by="unclaimed_fee")
 #print(temp1)
 
 save_position(data1, pool="USDC-SOL")
-save_position(data2, pool="Meowpin-SOL")
+#save_position(data2, pool="Agamemnon-SOL")
 print("All is OK")
 

@@ -268,7 +268,14 @@ class Bin:
         self.order_age = r.u32()
         self.limit_order_ask_side = r.u8()
         self.padding1 = r.skip(3)
-
+    
+    @property
+    def is_empty(self):
+        return (
+            self.amount_x == 0 and
+            self.amount_y == 0
+        )    
+    
     def __repr__(self):
         return (
             f"amount_x: {self.amount_x}, "
@@ -433,6 +440,7 @@ class LbPair:
     def active_bin(self):
         return self.active_id
     
+  
     """     @property
     def min_price(self):
 
@@ -531,6 +539,26 @@ class PositionV2:
         self.permissionless_operation_bits = r.u8()
         self.reserved = r.skip(85)
 
+    @property
+    def bin_ids(self):
+        return list(
+            range(
+                self.lower_bin_id,
+                self.upper_bin_id + 1,
+            )
+        )
+    
+    @property
+    def width(self):
+        return self.upper_bin_id - self.lower_bin_id + 1    
+
+    def in_range(self, active_id):
+        return (
+            self.lower_bin_id <=
+            active_id <=
+            self.upper_bin_id
+        )
+
     def __repr__(self):
         return (
             f"lb_pair: {self.lb_pair},\n"
@@ -551,6 +579,8 @@ class PositionV2:
             f"version: {self.version},\n"
             f"permissionless_operation_bits: {self.permissionless_operation_bits},\n"
         )
+    
+
 
     
 rpc = MeteoraRPC(URL)
@@ -569,8 +599,8 @@ position = rpc.get_position("4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq")
 #print("-"*50)
 
 #data = bytes(account.value.data)
-#lb = LbPair(data, "HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR")
-#print(lb.active_bin)
+#lb = LbPair(data, "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd", rpc)
+#print(lb.total_liquidity)
 
 #print(lb.price)
 #print(lb.fee_rate)
@@ -583,16 +613,20 @@ position = rpc.get_position("4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq")
 #print(lb_pair.parameters.base_fee_power_factor)
 #print(lb_pair.get_bin(lb_pair.active_id))
 
-#print(position)
+print(position.bin_ids)
+print(position.in_range(214))
 
-lb_pair = Pubkey.from_string("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
-base = Pubkey.from_string("D1ZN9Wj1fRSUQfCjhvnu1hqDMT7hzjzBBpi12nVniYD6")
+""" lb_pair = Pubkey.from_string("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+base = Pubkey.from_string("6NYPquPNfZALPDCVLTjADvzVsarRriGi1HS26ydo6s2C")
 
 pda, bump = derive_position_pda(lb_pair=lb_pair,
     base=base,
     lower_bin_id=213,
     width=69,
-)
+) 
 
-print(pda)
+print(pda)"""
 
+##position_bin_data, bump2 = derive_position_bin_data_pda(lb_pair)
+#print(position_bin_data)
+#4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq
