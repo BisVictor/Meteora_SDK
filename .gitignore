@@ -1,10 +1,10 @@
 meteora_positions.csv
 plot.png
 pools_addres.txt
-__pycache__/models.cpython-313.pyc
 plot.png
-meteora_positions.csv
 meteora/__pycache__/*
 meteora/__pycache__/
 *.png
 *.csv
+__pycache__/models.cpython-313.pyc
+tests/__pycache__/test_rpc.cpython-313-pytest-9.1.1.pyc
