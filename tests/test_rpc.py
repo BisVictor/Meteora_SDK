@@ -1,5 +1,5 @@
 import pytest
-from meteora.rpc import MeteoraRPC, LbPair, URL
+from meteora.rpc import MeteoraRPC, LbPair, Bin, URL
 
 def test_1_lb_pair_price():
     rpc = MeteoraRPC(URL)
@@ -74,8 +74,19 @@ def test_7_position_in_range():
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
     position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
     position = rpc.get_position(position_address)
+
     print("position.in_range(pool.active_bin): ", position.in_range(pool.active_bin))
 
     assert position.in_range(pool.active_bin) == True
     assert isinstance(position.in_range(pool.active_bin), bool)
+
+def test_8_lb_pair_get_bin():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    bin = pool.get_bin(pool.active_bin)
+
+    print("pool.get_bin(pool.active_bin): ", bin)
+
+    assert isinstance(bin, Bin)
+    
     

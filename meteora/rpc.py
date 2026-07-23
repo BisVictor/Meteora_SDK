@@ -403,7 +403,7 @@ class LbPair:
 
         return BinArray(data_bin_array.value.data)      
     
-    def get_bin(self, bin_id: int):
+    def get_bin(self, bin_id: int) -> Bin:
         """Выводит Bin из массива BinArray"""
         # проверить на отрицательные числа!!!
         array = self.get_bin_array(bin_id)
@@ -411,6 +411,10 @@ class LbPair:
         if index < 0:
             index += 70
         return array.bins[index]
+    
+    def get_bins(self, lower_bin_id: int, upper_bin_id: int) -> list[Bin]:
+        pass
+
     
     def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):
         lower = bin_id_to_bin_array_index(lower_bin_id)
@@ -628,10 +632,6 @@ class PositionV2:
             f"permissionless_operation_bits: {self.permissionless_operation_bits},\n"
         )
     
-
-
-    
-
 
 #lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteora Meowpin-SOL Fee: 3.00% • Bin Step: 100
 #account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
