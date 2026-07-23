@@ -88,5 +88,14 @@ def test_8_lb_pair_get_bin():
     print("pool.get_bin(pool.active_bin): ", bin)
 
     assert isinstance(bin, Bin)
+
+def test_9_lb_pair_get_bins():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    bin = pool.get_bins(100, 120)
+
+    print("pool.get_bins(100, 120)): ", bin)
+
+    assert isinstance(bin, list)
     
     

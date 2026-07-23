@@ -413,7 +413,13 @@ class LbPair:
         return array.bins[index]
     
     def get_bins(self, lower_bin_id: int, upper_bin_id: int) -> list[Bin]:
-        pass
+        list_of_bins = []
+
+        for i in range(lower_bin_id, upper_bin_id + 1):
+            bin = self.get_bin(i)
+            list_of_bins.append(bin)
+        
+        return list_of_bins
 
     
     def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):

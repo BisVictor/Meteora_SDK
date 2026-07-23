@@ -8,3 +8,4 @@ meteora/__pycache__/
 *.csv
 __pycache__/models.cpython-313.pyc
 tests/__pycache__/test_rpc.cpython-313-pytest-9.1.1.pyc
+.env
