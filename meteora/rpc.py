@@ -1,10 +1,11 @@
 from solana.rpc.api import Client
+from solana.rpc.types import MemcmpOpts
 from solders.pubkey import Pubkey
 from dotenv import load_dotenv
 import os
 
-from helpers import bin_id_to_bin_array_index
-from pda import *
+from .helpers import bin_id_to_bin_array_index
+from .pda import PROGRAM_ID, derive_bin_array_pda, derive_position_pda, derive_position_bin_data_pda
 
 import struct
 
@@ -13,8 +14,6 @@ load_dotenv()
 URL = "https://api.mainnet-beta.solana.com"
 
 DISCRIMINATOR = 986681623081716513
-#DISCRIMINATOR = b'!\x0b1b\xb5e\xb1\r'
-
 
 class  MeteoraRPC:
 
@@ -31,17 +30,35 @@ class  MeteoraRPC:
         if isinstance(pubkey, str):
             pubkey = Pubkey.from_string(pubkey)
         response = self.client.get_account_info(pubkey)
+
         return LbPair(response.value.data, pubkey, self)     
 
     def get_position(self, pubkey: str | Pubkey):
         if isinstance(pubkey, str):
               pubkey = Pubkey.from_string(pubkey)
         response = self.client.get_account_info(pubkey)
+
         return PositionV2(response.value.data)  
     
-    def get_balance(self, pubkey):
-        pubkey = Pubkey.from_string(pubkey)
+    def get_balance(self, pubkey: str | Pubkey):
+        if isinstance(pubkey, str):
+            pubkey = Pubkey.from_string(pubkey)
+        
         return self.client.get_balance(pubkey)
+    
+    def get_positions(self, pubkey: str | Pubkey):
+        response = self.client.get_program_accounts(
+            PROGRAM_ID,
+            encoding="base64",
+            filters=[
+                MemcmpOpts(
+            offset=40,
+            bytes=str(pubkey),
+                            )
+                    ]
+            )
+        return [PositionV2(i.account.data) for i in response.value]
+        
 
 class Reader:
 
@@ -227,14 +244,15 @@ class RewardInfo:
 class RewardInfos:
 
     def __init__(self, r: Reader):
-        self.zero = RewardInfo(r)
-        self.one = RewardInfo(r)
+        self.rewards = [
+            RewardInfo(r),
+            RewardInfo(r)
+        ]
 
     def __repr__(self):
         return (
             "\n___ Reward Infos ___\n"
-            f"zero: {self.zero}\n"
-            f"one: {self.one}\n"
+            f"rewards: {self.rewards}\n"            
         )
     
 class BinArrayBitmap:
@@ -321,7 +339,7 @@ class LbPair:
         r = Reader(data)
 
         if isinstance(address, str):
-            self.address = Pubkey.from_string(address)
+            address = Pubkey.from_string(address)
         
         self.address = address
         self.client = client
@@ -387,14 +405,44 @@ class LbPair:
     
     def get_bin(self, bin_id: int):
         """Выводит Bin из массива BinArray"""
+        # проверить на отрицательные числа!!!
         array = self.get_bin_array(bin_id)
         index = bin_id % 70
         if index < 0:
             index += 70
         return array.bins[index]
+    
+    def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):
+        lower = bin_id_to_bin_array_index(lower_bin_id)
+        upper = bin_id_to_bin_array_index(upper_bin_id)
+       
+        bin_arrays = []
+        for index in range(lower, upper+1):
+            pda, _ =derive_bin_array_pda(self.address, index)
+            account = self.client.get_account(pda)
+            bin_arrays.append(BinArray(account.value.data))
+
+        return bin_arrays
+    
+    def get_position(self, owner: str | Pubkey,
+                     lower_bin_id: int,
+                     upper_bin_id: int):
+        if isinstance(owner, str):
+            owner = Pubkey.from_string(owner)
+
+        wide = upper_bin_id - lower_bin_id + 1
+        
+        pda, bump = derive_position_pda(
+            Pubkey.from_string(self.address),
+            base=owner,
+            lower_bin_id=lower_bin_id,
+            width=wide
+        )
+
+        return self.client.get_position(pda)
 
     @property
-    def price(self):
+    def price(self) -> float:
         x_mint, y_mint = self._load_tokens()
         raw_price = (
             1 + self.bin_step / 10_000
@@ -586,35 +634,18 @@ class PositionV2:
 rpc = MeteoraRPC(URL)
 
 #lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteora Meowpin-SOL Fee: 3.00% • Bin Step: 100
-#account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
+account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
 #account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 
-position = rpc.get_position("4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq")
-#print(account)
 
-#print(account)
-#print("-"*50)
+#print(position.bin_ids)
+#print(position.in_range(214))
 
-#data = bytes(account.value.data)
-#lb = LbPair(data, "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd", rpc)
-#print(lb.total_liquidity)
-
-#print(lb.price)
-#print(lb.fee_rate)
-#print(lb.variable_fee)
-#print(lb.total_fee)
-
-#print(lb_pair.active_bin)
-#print(lb_pair.price)
-#print(lb_pair.total_fee)
-#print(lb_pair.parameters.base_fee_power_factor)
-#print(lb_pair.get_bin(lb_pair.active_id))
-
-print(position.bin_ids)
-print(position.in_range(214))
+#p2 = rpc.get_positions("6NYPquPNfZALPDCVLTjADvzVsarRriGi1HS26ydo6s2C")
+#print(p2)
 
 """ lb_pair = Pubkey.from_string("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
 base = Pubkey.from_string("6NYPquPNfZALPDCVLTjADvzVsarRriGi1HS26ydo6s2C")
@@ -625,7 +656,7 @@ pda, bump = derive_position_pda(lb_pair=lb_pair,
     width=69,
 ) 
 
-print(pda)"""
+print(pda) """
 
 ##position_bin_data, bump2 = derive_position_bin_data_pda(lb_pair)
 #print(position_bin_data)
