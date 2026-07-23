@@ -631,33 +631,11 @@ class PositionV2:
 
 
     
-rpc = MeteoraRPC(URL)
+
 
 #lb_pair = rpc.get_lb_pair("2TkcXuNdiWE6GPg68SC7koE4C6wdZTvA3bk7CQU6iPAu") #meteora Meowpin-SOL Fee: 3.00% • Bin Step: 100
-account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
+#account = rpc.get_account("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd") #meteora USDC-SOL Fee: 0.10% • Bin Step: 100
 #account = rpc.get_account("HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR") #meteora SOL-USDC Fee: 0.01% • Bin Step: 1
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
-
-
-#print(position.bin_ids)
-#print(position.in_range(214))
-
-#p2 = rpc.get_positions("6NYPquPNfZALPDCVLTjADvzVsarRriGi1HS26ydo6s2C")
-#print(p2)
-
-""" lb_pair = Pubkey.from_string("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
-base = Pubkey.from_string("6NYPquPNfZALPDCVLTjADvzVsarRriGi1HS26ydo6s2C")
-
-pda, bump = derive_position_pda(lb_pair=lb_pair,
-    base=base,
-    lower_bin_id=213,
-    width=69,
-) 
-
-print(pda) """
-
-##position_bin_data, bump2 = derive_position_bin_data_pda(lb_pair)
-#print(position_bin_data)
-#4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq
