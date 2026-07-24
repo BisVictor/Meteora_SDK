@@ -2,6 +2,7 @@ from solana.rpc.api import Client
 from solana.rpc.types import MemcmpOpts
 from solders.pubkey import Pubkey
 from dotenv import load_dotenv
+from typing import Dict, Tuple, Optional
 import os
 
 from .helpers import bin_id_to_bin_array_index
@@ -38,7 +39,7 @@ class  MeteoraRPC:
               pubkey = Pubkey.from_string(pubkey)
         response = self.client.get_account_info(pubkey)
 
-        return PositionV2(response.value.data)  
+        return PositionV2(response.value.data, self)  
     
     def get_balance(self, pubkey: str | Pubkey):
         if isinstance(pubkey, str):
@@ -419,8 +420,7 @@ class LbPair:
             bin = self.get_bin(i)
             list_of_bins.append(bin)
         
-        return list_of_bins
-
+        return list_of_bins  
     
     def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):
         lower = bin_id_to_bin_array_index(lower_bin_id)
@@ -450,6 +450,22 @@ class LbPair:
         )
 
         return self.client.get_position(pda)
+
+    def get_liquidity_in_range(self, lower: int, upper: int):
+        if lower > upper:
+            lower, upper = upper, lower
+
+        bins = self.get_bins(lower, upper)
+        total_x = 0
+        total_y = 0
+
+        for bin in bins:
+            x = bin.amount_x
+            y = bin.amount_y
+            total_x += x
+            total_y += y                 
+
+        return total_x, total_y
 
     @property
     def price(self) -> float:
@@ -574,8 +590,10 @@ class BinArray:
     
 class PositionV2:
 
-    def __init__(self, data):
+    def __init__(self, data: bytes, client: MeteoraRPC):
         r = Reader(data)
+        self.client = client
+
         self.discriminator = r.u64()
         self.lb_pair = r.pubkey()
         self.owner = r.pubkey()
@@ -596,6 +614,26 @@ class PositionV2:
         self.version = r.u8()
         self.permissionless_operation_bits = r.u8()
         self.reserved = r.skip(85)
+
+    def get_unclaimed_fees_raw(self) -> Tuple[int, int]:
+        """Возвращает сырые значения (в lamports/atomic units)"""
+        fee_x = sum(info.fee_x_pending for info in self.fee_infos)
+        fee_y = sum(info.fee_y_pending for info in self.fee_infos)
+        return fee_x, fee_y
+
+    def get_unclaimed_fees(self, lb_pair: Optional["LbPair"] = None) -> Tuple[float, float]:
+        """Human-readable fees"""
+        fee_x_raw, fee_y_raw = self.get_unclaimed_fees_raw()
+
+        if lb_pair is None:
+            lb_pair = self.client.get_lb_pair(self.lb_pair)
+
+        x_mint, y_mint = lb_pair._load_tokens()
+
+        return (
+            fee_x_raw / 10 ** x_mint.decimal,
+            fee_y_raw / 10 ** y_mint.decimal,
+        )
 
     @property
     def bin_ids(self):

@@ -92,10 +92,35 @@ def test_8_lb_pair_get_bin():
 def test_9_lb_pair_get_bins():
     rpc = MeteoraRPC(URL)
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
-    bin = pool.get_bins(100, 120)
+    bin = pool.get_bins(100, 105)
 
-    print("pool.get_bins(100, 120)): ", bin)
+    print("pool.get_bins(100, 105)): ", bin)
 
     assert isinstance(bin, list)
-    
-    
+
+def test_10_position_get_unclaimed_fees():
+    rpc = MeteoraRPC(URL)    
+    position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
+    position = rpc.get_position(position_address)
+
+    x, y = position.get_unclaimed_fees()
+    print("osition.get_unclaimed_fees): ", x, y)
+
+def test_11_lb_pair_get_bins():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    bin = pool.get_liquidity_in_range(260, 266)
+
+    print("pool.get_liquidity_in_range(100, 105)): ", bin)  
+
+def test_12():
+    rpc = MeteoraRPC(URL)
+    a = 265 % 70
+    b = 200 % 70
+    c = 280 % 70
+
+    print(a, b, c)
+
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    print(len(pool.bin_array_bitmap))
