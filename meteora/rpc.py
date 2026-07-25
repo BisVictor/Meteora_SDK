@@ -2,10 +2,10 @@ from solana.rpc.api import Client
 from solana.rpc.types import MemcmpOpts
 from solders.pubkey import Pubkey
 from dotenv import load_dotenv
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 import os
 
-from .helpers import bin_id_to_bin_array_index
+from .helpers import bin_id_to_bin_array_index, bin_array_index_from_bitmap
 from .pda import PROGRAM_ID, derive_bin_array_pda, derive_position_pda, derive_position_bin_data_pda
 
 import struct
@@ -40,6 +40,13 @@ class  MeteoraRPC:
         response = self.client.get_account_info(pubkey)
 
         return PositionV2(response.value.data, self)  
+
+    def get_bin_array(self, pubkey: str | Pubkey):
+            if isinstance(pubkey, str):
+                  pubkey = Pubkey.from_string(pubkey)
+            response = self.client.get_account_info(pubkey)
+    
+            return BinArray(response.value.data, self)  
     
     def get_balance(self, pubkey: str | Pubkey):
         if isinstance(pubkey, str):
@@ -267,6 +274,8 @@ class BinArrayBitmap:
             "\n___ Bin Array Bitmap ___\n"
             f"values: {self.values}\n"
         )
+    def __len__(self):
+        return len(self.values)
 
 class Bin:
 
@@ -421,6 +430,18 @@ class LbPair:
             list_of_bins.append(bin)
         
         return list_of_bins  
+
+    def bin_arrays_index_from_bitmap(self):         
+        indexes = []
+
+        for i, value in enumerate(self.bin_array_bitmap.values):           
+            if value > 0:
+                indexes.append(
+                    bin_array_index_from_bitmap(i, value)
+                )
+
+        return indexes
+
     
     def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):
         lower = bin_id_to_bin_array_index(lower_bin_id)
@@ -466,6 +487,28 @@ class LbPair:
             total_y += y                 
 
         return total_x, total_y
+
+    def get_liquidity_in_arrays(self, arrays: list):
+        total_x = 0
+        total_y = 0
+
+        for index in arrays:
+            print(index)
+            pda, bump = derive_bin_array_pda(self.address, index)
+            bin_array = self.client.get_bin_array(pda)
+            x, y = bin_array.get_liquidity()
+            total_x += x
+            total_y += y
+
+        return total_x, total_y
+            
+    
+    @property
+    def tvl(self):
+        bin_arrays = self.bin_arrays_index_from_bitmap()
+        for array in bin_arrays:
+            pass
+
 
     @property
     def price(self) -> float:
@@ -579,6 +622,17 @@ class BinArray:
         self.padding1 = r.skip(7)
         self.lb_pair = r.pubkey()
         self.bins = [Bin(r) for _ in range(70)]
+
+    @property
+    def get_liquidity(self):
+        total_x = 0
+        total_y = 0
+
+        for bin in self.bins:            
+            total_x += bin.amount_x
+            total_y += bin.amount_y            
+
+        return total_x, total_y
     
     def __repr__(self):
         return(
@@ -683,3 +737,9 @@ class PositionV2:
 #account = rpc.get_account("6F4rVnmVc1A2QDqpHn5cpQZfXugapFbGZTXEyaakpvVQ") #meteora HYPE-USDC Fee: 0.10% • Bin Step: 10
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
+
+rpc = MeteoraRPC(URL)
+pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+arrays = pool.bin_arrays_index_from_bitmap()
+print(arrays)
+#print(pool.get_liquidity_in_arrays(arrays))

@@ -1,7 +1,7 @@
 import pytest
 from meteora.rpc import MeteoraRPC, LbPair, Bin, URL
 
-def test_1_lb_pair_price():
+""" def test_1_lb_pair_price():
     rpc = MeteoraRPC(URL)
     pool_address = "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd"
     account = rpc.get_account(pool_address)  # Meteora USDC-SOL Fee: 0.10% • Bin Step: 100
@@ -111,10 +111,9 @@ def test_11_lb_pair_get_bins():
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
     bin = pool.get_liquidity_in_range(260, 266)
 
-    print("pool.get_liquidity_in_range(100, 105)): ", bin)  
+    print("pool.get_liquidity_in_range(100, 105)): ", bin)   """
 
-def test_12():
-    rpc = MeteoraRPC(URL)
+def test_12_lb_pair_bin_arrays_index_from_bitmap():
     a = 265 % 70
     b = 200 % 70
     c = 280 % 70
@@ -122,5 +121,18 @@ def test_12():
     print(a, b, c)
 
     rpc = MeteoraRPC(URL)
+    #pool = rpc.get_lb_pair("GMcDowNwC6yozAeZZHgJWMmH7gUpudDq55C84uv1WQkn")
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
-    print(len(pool.bin_array_bitmap))
+    bit_map = pool.bin_array_bitmap
+    print("len: ",len(pool.bin_array_bitmap))
+    print(pool.bin_array_bitmap)
+    print(f"{pool.bin_array_bitmap.values[8]:064b}")
+    print(pool.active_bin)
+    print(pool.bin_arrays_index_from_bitmap())
+
+def test_13_lb_pair_get_liquidity_in_arrays():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    arrays = pool.bin_arrays_index_from_bitmap()
+    print(arrays)
+    print(pool.get_liquidity_in_arrays(arrays))
