@@ -422,25 +422,39 @@ class LbPair:
             index += 70
         return array.bins[index]
     
-    def get_bins(self, lower_bin_id: int, upper_bin_id: int) -> list[Bin]:
-        list_of_bins = []
+    def get_bins(self, lower_bin_id: int, upper_bin_id: int):
+        if lower_bin_id > upper_bin_id:
+            lower_bin_id, upper_bin_id = upper_bin_id, lower_bin_id
+            
+        if lower_bin_id < 0:
+            lower_bin_id -= 69
 
-        for i in range(lower_bin_id, upper_bin_id + 1):
-            bin = self.get_bin(i)
-            list_of_bins.append(bin)
-        
-        return list_of_bins  
+        bin_array_list = []
+
+        min_bin_array = int(lower_bin_id / 70)
+        max_bin_array = int(upper_bin_id / 70)
+
+        if min_bin_array == max_bin_array:            
+            bin_array_list.append(self.get_bin_array(lower_bin_id))
+        else:
+            for _ in range(min_bin_array, max_bin_array+1):
+                bin_array = self.get_bin_array(lower_bin_id)
+                bin_array_list.append(bin_array)
+                lower_bin_id += 70
+
+        return bin_array_list
+ 
 
     def bin_arrays_index_from_bitmap(self):         
-        indexes = []
+        matrix = []
 
         for i, value in enumerate(self.bin_array_bitmap.values):           
             if value > 0:
-                indexes.append(
+                matrix.append(
                     bin_array_index_from_bitmap(i, value)
                 )
 
-        return indexes
+        return [x for row in matrix for x in row]
 
     
     def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):
@@ -492,11 +506,10 @@ class LbPair:
         total_x = 0
         total_y = 0
 
-        for index in arrays:
-            print(index)
+        for index in arrays:            
             pda, bump = derive_bin_array_pda(self.address, index)
             bin_array = self.client.get_bin_array(pda)
-            x, y = bin_array.get_liquidity()
+            x, y = bin_array.get_liquidity
             total_x += x
             total_y += y
 
@@ -506,8 +519,9 @@ class LbPair:
     @property
     def tvl(self):
         bin_arrays = self.bin_arrays_index_from_bitmap()
-        for array in bin_arrays:
-            pass
+        x, y = self.get_liquidity_in_arrays(bin_arrays)
+
+        return x, y
 
 
     @property
@@ -614,8 +628,10 @@ class LbPair:
     
 class BinArray:
 
-    def __init__(self, data):
+    def __init__(self, data: bytes, client: MeteoraRPC):
         r = Reader(data)
+        self.client = client
+
         self.discriminator = r.u64()
         self.index = r.i64()
         self.version = r.u8()

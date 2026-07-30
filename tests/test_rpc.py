@@ -124,9 +124,9 @@ def test_12_lb_pair_bin_arrays_index_from_bitmap():
     #pool = rpc.get_lb_pair("GMcDowNwC6yozAeZZHgJWMmH7gUpudDq55C84uv1WQkn")
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
     bit_map = pool.bin_array_bitmap
-    print("len: ",len(pool.bin_array_bitmap))
-    print(pool.bin_array_bitmap)
-    print(f"{pool.bin_array_bitmap.values[8]:064b}")
+    print("len: ",len(bit_map))
+    print(bit_map)
+    print(f"{bit_map.values[8]:064b}")
     print(pool.active_bin)
     print(pool.bin_arrays_index_from_bitmap())
 
@@ -136,3 +136,9 @@ def test_13_lb_pair_get_liquidity_in_arrays():
     arrays = pool.bin_arrays_index_from_bitmap()
     print(arrays)
     print(pool.get_liquidity_in_arrays(arrays))
+
+def test_14_lb_pair_tvl():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    arrays = pool.tvl
+    print(arrays)
