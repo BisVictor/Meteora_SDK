@@ -1,3 +1,5 @@
+from solders.pubkey import Pubkey
+
 def bin_id_to_bin_array_index(active_id: int) -> int:
     quotient = int(active_id / 70)      
     remainder = active_id - quotient * 70
@@ -26,3 +28,18 @@ def bin_array_index_from_bitmap(index: int, bitmap_values: int):
             count += 1
 
     return array
+
+def normalize_pubkey(pubkey: str | Pubkey) -> Pubkey:
+    if isinstance(pubkey, str):
+        pubkey = Pubkey.from_string(pubkey)
+
+    elif type(pubkey) != Pubkey and type(pubkey) != str:
+        raise ValueError("Pubkey must be str or type Pubkey")
+
+    return pubkey
+
+def get_bin_index(bin_id: int):    
+    if bin_id < 0:
+        bin_id = abs(bin_id) - 1
+
+    return bin_id % 70

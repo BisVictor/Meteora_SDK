@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from typing import Dict, Tuple, Optional, List
 import os
 
-from .helpers import bin_id_to_bin_array_index, bin_array_index_from_bitmap
+from .helpers import bin_id_to_bin_array_index, bin_array_index_from_bitmap, normalize_pubkey, get_bin_index
 from .pda import PROGRAM_ID, derive_bin_array_pda, derive_position_pda, derive_position_bin_data_pda
 
 import struct
@@ -22,39 +22,35 @@ class  MeteoraRPC:
         self.client = Client(rpc_url)
 
     def get_account(self, pubkey):
-        if isinstance(pubkey, str):
-            pubkey = Pubkey.from_string(pubkey)
+        pubkey = normalize_pubkey(pubkey)
 
         return self.client.get_account_info(pubkey)
     
     def get_lb_pair(self, pubkey: str | Pubkey):
-        if isinstance(pubkey, str):
-            pubkey = Pubkey.from_string(pubkey)
+        pubkey = normalize_pubkey(pubkey)
         response = self.client.get_account_info(pubkey)
 
         return LbPair(response.value.data, pubkey, self)     
 
     def get_position(self, pubkey: str | Pubkey):
-        if isinstance(pubkey, str):
-              pubkey = Pubkey.from_string(pubkey)
+        pubkey = normalize_pubkey(pubkey)
         response = self.client.get_account_info(pubkey)
 
         return PositionV2(response.value.data, self)  
 
     def get_bin_array(self, pubkey: str | Pubkey):
-            if isinstance(pubkey, str):
-                  pubkey = Pubkey.from_string(pubkey)
-            response = self.client.get_account_info(pubkey)
-    
-            return BinArray(response.value.data, self)  
+        pubkey = normalize_pubkey(pubkey)
+        response = self.client.get_account_info(pubkey)
+
+        return BinArray(response.value.data, self)  
     
     def get_balance(self, pubkey: str | Pubkey):
-        if isinstance(pubkey, str):
-            pubkey = Pubkey.from_string(pubkey)
+        pubkey = normalize_pubkey(pubkey)
         
         return self.client.get_balance(pubkey)
     
     def get_positions(self, pubkey: str | Pubkey):
+        pubkey = normalize_pubkey(pubkey)
         response = self.client.get_program_accounts(
             PROGRAM_ID,
             encoding="base64",
@@ -411,7 +407,7 @@ class LbPair:
         pda, bump = derive_bin_array_pda(self.address, bin_array_index)
         data_bin_array = self.client.get_account(pda)
 
-        return BinArray(data_bin_array.value.data)      
+        return BinArray(data_bin_array.value.data, self.client)      
     
     def get_bin(self, bin_id: int) -> Bin:
         """Выводит Bin из массива BinArray"""
@@ -423,6 +419,9 @@ class LbPair:
         return array.bins[index]
     
     def get_bins(self, lower_bin_id: int, upper_bin_id: int):
+        l_bin_id = lower_bin_id
+        u_bin_id = upper_bin_id + 1
+
         if lower_bin_id > upper_bin_id:
             lower_bin_id, upper_bin_id = upper_bin_id, lower_bin_id
             
@@ -430,6 +429,7 @@ class LbPair:
             lower_bin_id -= 69
 
         bin_array_list = []
+        bin_list = []
 
         min_bin_array = int(lower_bin_id / 70)
         max_bin_array = int(upper_bin_id / 70)
@@ -442,7 +442,14 @@ class LbPair:
                 bin_array_list.append(bin_array)
                 lower_bin_id += 70
 
-        return bin_array_list
+        for i in range(l_bin_id, u_bin_id):
+            index = get_bin_index(i)
+            for bin_array in bin_array_list:
+                if bin_array.index == bin_id_to_bin_array_index(i):
+                    bin_list.append(bin_array.bins[index])
+
+        return bin_list
+
  
 
     def bin_arrays_index_from_bitmap(self):         
@@ -754,8 +761,8 @@ class PositionV2:
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 
-rpc = MeteoraRPC(URL)
-pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
-arrays = pool.bin_arrays_index_from_bitmap()
-print(arrays)
+#rpc = MeteoraRPC(URL)
+#pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+#arrays = pool.bin_arrays_index_from_bitmap()
+#print(arrays)
 #print(pool.get_liquidity_in_arrays(arrays))

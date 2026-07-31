@@ -1,7 +1,8 @@
 import pytest
 from meteora.rpc import MeteoraRPC, LbPair, Bin, URL
+from meteora.helpers import get_bin_index
 
-""" def test_1_lb_pair_price():
+def test_1_lb_pair_price():
     rpc = MeteoraRPC(URL)
     pool_address = "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd"
     account = rpc.get_account(pool_address)  # Meteora USDC-SOL Fee: 0.10% • Bin Step: 100
@@ -11,7 +12,6 @@ from meteora.rpc import MeteoraRPC, LbPair, Bin, URL
     print("lb.price:", lb.price)
 
     assert lb.price < 1
-
 
 def test_2_lb_pair_fee_rate():
     rpc = MeteoraRPC(URL)
@@ -24,7 +24,6 @@ def test_2_lb_pair_fee_rate():
 
     assert lb.fee_rate == 0.1
 
-
 def test_3_lb_pair_variable_fee():
     rpc = MeteoraRPC(URL)
     pool_address = "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd"
@@ -36,7 +35,6 @@ def test_3_lb_pair_variable_fee():
 
     assert lb.variable_fee >= 0
 
-
 def test_4_lb_pair_total_fee():
     rpc = MeteoraRPC(URL)
     pool_address = "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd"
@@ -47,7 +45,6 @@ def test_4_lb_pair_total_fee():
     print("lb.total_fee:", lb.total_fee)
 
     assert lb.total_fee >= 0.1
-
 
 def test_5_lb_pair_active_bin():
     rpc = MeteoraRPC(URL)
@@ -111,7 +108,7 @@ def test_11_lb_pair_get_bins():
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
     bin = pool.get_liquidity_in_range(260, 266)
 
-    print("pool.get_liquidity_in_range(100, 105)): ", bin)   """
+    print("pool.get_liquidity_in_range(100, 105)): ", bin)   
 
 def test_12_lb_pair_bin_arrays_index_from_bitmap():
     a = 265 % 70
@@ -142,3 +139,22 @@ def test_14_lb_pair_tvl():
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
     arrays = pool.tvl
     print(arrays)
+
+def test_15_helpers_get_bin_index():
+    assert get_bin_index(0) == 0
+    assert get_bin_index(69) == 69
+    assert get_bin_index(70) == 0
+    assert get_bin_index(140) == 0
+
+    assert get_bin_index(-1) == 0
+    assert get_bin_index(-70) == 69
+    assert get_bin_index(-71) == 0
+    assert get_bin_index(-141) == 0
+
+def test_16_lb_pair_get_bins():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+    bins = pool.get_bins(213, 281)
+    print(len(bins))
+
+    assert len(bins) == 69
