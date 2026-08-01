@@ -399,15 +399,7 @@ class LbPair:
         self.x_mint = TokenMint(self._token_x_mint.value.data)
         self.y_mint = TokenMint(self._token_y_mint.value.data)
 
-        return self.x_mint, self.y_mint   
-    
-    def get_bin_array(self, bin_id: int):
-        """Выводит BinArray по bin id"""
-        bin_array_index = bin_id_to_bin_array_index(bin_id)
-        pda, bump = derive_bin_array_pda(self.address, bin_array_index)
-        data_bin_array = self.client.get_account(pda)
-
-        return BinArray(data_bin_array.value.data, self.client)      
+        return self.x_mint, self.y_mint      
     
     def get_bin(self, bin_id: int) -> Bin:
         """Выводит Bin из массива BinArray"""
@@ -450,20 +442,14 @@ class LbPair:
 
         return bin_list
 
- 
+    def get_bin_array(self, bin_id: int):
+        """Выводит BinArray по bin id"""
+        bin_array_index = bin_id_to_bin_array_index(bin_id)
+        pda, bump = derive_bin_array_pda(self.address, bin_array_index)
+        data_bin_array = self.client.get_account(pda)
 
-    def bin_arrays_index_from_bitmap(self):         
-        matrix = []
+        return BinArray(data_bin_array.value.data, self.client)  
 
-        for i, value in enumerate(self.bin_array_bitmap.values):           
-            if value > 0:
-                matrix.append(
-                    bin_array_index_from_bitmap(i, value)
-                )
-
-        return [x for row in matrix for x in row]
-
-    
     def get_bin_arrays(self, lower_bin_id: int, upper_bin_id: int):
         lower = bin_id_to_bin_array_index(lower_bin_id)
         upper = bin_id_to_bin_array_index(upper_bin_id)
@@ -475,7 +461,18 @@ class LbPair:
             bin_arrays.append(BinArray(account.value.data))
 
         return bin_arrays
-    
+
+    def bin_arrays_index_from_bitmap(self):         
+        matrix = []
+
+        for i, value in enumerate(self.bin_array_bitmap.values):           
+            if value > 0:
+                matrix.append(
+                    bin_array_index_from_bitmap(i, value)
+                )
+
+        return [x for row in matrix for x in row]
+        
     def get_position(self, owner: str | Pubkey,
                      lower_bin_id: int,
                      upper_bin_id: int):
@@ -520,8 +517,7 @@ class LbPair:
             total_x += x
             total_y += y
 
-        return total_x, total_y
-            
+        return total_x, total_y            
     
     @property
     def tvl(self):
@@ -529,7 +525,6 @@ class LbPair:
         x, y = self.get_liquidity_in_arrays(bin_arrays)
 
         return x, y
-
 
     @property
     def price(self) -> float:
@@ -554,7 +549,6 @@ class LbPair:
     
     @property
     def variable_fee(self):
-
         v = self.v_parameters.volatility_accumulator
 
         return (
@@ -564,7 +558,6 @@ class LbPair:
             ) ** 2 *
             self.parameters.variable_fee_control
         ) / 1_00_000_000_000_000_000
-
 
     @property
     def total_fee(self):

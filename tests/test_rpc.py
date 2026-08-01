@@ -111,12 +111,6 @@ def test_11_lb_pair_get_bins():
     print("pool.get_liquidity_in_range(100, 105)): ", bin)   
 
 def test_12_lb_pair_bin_arrays_index_from_bitmap():
-    a = 265 % 70
-    b = 200 % 70
-    c = 280 % 70
-
-    print(a, b, c)
-
     rpc = MeteoraRPC(URL)
     #pool = rpc.get_lb_pair("GMcDowNwC6yozAeZZHgJWMmH7gUpudDq55C84uv1WQkn")
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
