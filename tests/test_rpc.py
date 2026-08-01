@@ -152,3 +152,12 @@ def test_16_lb_pair_get_bins():
     print(len(bins))
 
     assert len(bins) == 69
+
+def test_17_position_get_amounts():
+    rpc = MeteoraRPC(URL)    
+    position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
+    position = rpc.get_position(position_address)
+    amounts = position.get_amounts()
+    print(amounts)
+
+    assert isinstance(amounts, dict)
