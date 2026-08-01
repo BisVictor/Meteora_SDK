@@ -17,7 +17,7 @@ URL = "https://api.mainnet-beta.solana.com"
 DISCRIMINATOR = 986681623081716513
 
 class  MeteoraRPC:
-
+    # Нет проверки response.value is None !!!
     def __init__(self, rpc_url: str):
         self.client = Client(rpc_url)
 
@@ -38,17 +38,6 @@ class  MeteoraRPC:
 
         return PositionV2(response.value.data, self)  
 
-    def get_bin_array(self, pubkey: str | Pubkey):
-        pubkey = normalize_pubkey(pubkey)
-        response = self.client.get_account_info(pubkey)
-
-        return BinArray(response.value.data, self)  
-    
-    def get_balance(self, pubkey: str | Pubkey):
-        pubkey = normalize_pubkey(pubkey)
-        
-        return self.client.get_balance(pubkey)
-    
     def get_positions(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
         response = self.client.get_program_accounts(
@@ -61,8 +50,19 @@ class  MeteoraRPC:
                             )
                     ]
             )
-        return [PositionV2(i.account.data) for i in response.value]
+        return [PositionV2(i.account.data, self) for i in response.value]
+
+    def get_bin_array(self, pubkey: str | Pubkey):
+        pubkey = normalize_pubkey(pubkey)
+        response = self.client.get_account_info(pubkey)
+
+        return BinArray(response.value.data, self)  
+    
+    def get_balance(self, pubkey: str | Pubkey):
+        pubkey = normalize_pubkey(pubkey)
         
+        return self.client.get_balance(pubkey)
+            
 
 class Reader:
 
@@ -458,7 +458,7 @@ class LbPair:
         for index in range(lower, upper+1):
             pda, _ =derive_bin_array_pda(self.address, index)
             account = self.client.get_account(pda)
-            bin_arrays.append(BinArray(account.value.data))
+            bin_arrays.append(BinArray(account.value.data, self.client))
 
         return bin_arrays
 
@@ -482,7 +482,7 @@ class LbPair:
         wide = upper_bin_id - lower_bin_id + 1
         
         pda, bump = derive_position_pda(
-            Pubkey.from_string(self.address),
+            self.address,
             base=owner,
             lower_bin_id=lower_bin_id,
             width=wide
@@ -513,7 +513,7 @@ class LbPair:
         for index in arrays:            
             pda, bump = derive_bin_array_pda(self.address, index)
             bin_array = self.client.get_bin_array(pda)
-            x, y = bin_array.get_liquidity
+            x, y = bin_array.liquidity
             total_x += x
             total_y += y
 
@@ -640,7 +640,7 @@ class BinArray:
         self.bins = [Bin(r) for _ in range(70)]
 
     @property
-    def get_liquidity(self):
+    def liquidity(self):
         total_x = 0
         total_y = 0
 
@@ -704,6 +704,46 @@ class PositionV2:
             fee_x_raw / 10 ** x_mint.decimal,
             fee_y_raw / 10 ** y_mint.decimal,
         )
+    
+    def get_amounts(self, lb_pair=None):
+        if lb_pair is None:
+            lb_pair = self.client.get_lb_pair(self.lb_pair)     
+        
+        x_mint, y_mint = lb_pair._load_tokens()
+        bins = lb_pair.get_bins(self.lower_bin_id, self.upper_bin_id)
+
+        total_x = 0
+        total_y = 0
+
+        for i in range(len(bins)):            
+            one_bin = bins[i]            
+
+            if self.liquidity_shares[i] == 0 or one_bin.liquidity_supply == 0:
+                continue
+
+            amount_x = (self.liquidity_shares[i] * one_bin.amount_x) // one_bin.liquidity_supply
+            amount_y = (self.liquidity_shares[i] * one_bin.amount_y) // one_bin.liquidity_supply
+
+            total_x += amount_x
+            total_y += amount_y
+
+        return {
+        "x_raw": total_x,
+        "y_raw": total_y,
+        "x": total_x / 10 ** x_mint.decimal,
+        "y": total_y / 10 ** y_mint.decimal        
+        }
+
+       
+
+    def in_range(self, active_id):
+        return (
+            self.lower_bin_id <=
+            active_id <=
+            self.upper_bin_id
+        )
+
+    
 
     @property
     def bin_ids(self):
@@ -717,13 +757,7 @@ class PositionV2:
     @property
     def width(self):
         return self.upper_bin_id - self.lower_bin_id + 1    
-
-    def in_range(self, active_id):
-        return (
-            self.lower_bin_id <=
-            active_id <=
-            self.upper_bin_id
-        )
+  
 
     def __repr__(self):
         return (
@@ -754,8 +788,12 @@ class PositionV2:
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 
-#rpc = MeteoraRPC(URL)
+rpc = MeteoraRPC(URL)
 #pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
 #arrays = pool.bin_arrays_index_from_bitmap()
 #print(arrays)
 #print(pool.get_liquidity_in_arrays(arrays))
+
+position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
+position = rpc.get_position(position_address)
+position.get_amounts()
