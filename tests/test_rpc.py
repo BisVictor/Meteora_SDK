@@ -161,3 +161,10 @@ def test_17_position_get_amounts():
     print(amounts)
 
     assert isinstance(amounts, dict)
+
+def test_18_position_get_value():
+    rpc = MeteoraRPC(URL)    
+    position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
+    position = rpc.get_position(position_address)
+    value = position.get_value()
+    print(value)

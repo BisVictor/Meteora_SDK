@@ -734,6 +734,16 @@ class PositionV2:
         "y": total_y / 10 ** y_mint.decimal        
         }
 
+    def get_value(self, lb_pair=None):
+        if lb_pair is None:
+            lb_pair = self.client.get_lb_pair(self.lb_pair) 
+
+        price = lb_pair.price
+        amounts = self.get_amounts(lb_pair)
+        x = amounts["x"]   
+        y = amounts["y"]   
+
+        return y + x * price
        
 
     def in_range(self, active_id):
