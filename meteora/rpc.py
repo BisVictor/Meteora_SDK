@@ -21,10 +21,19 @@ class  MeteoraRPC:
     def __init__(self, rpc_url: str):
         self.client = Client(rpc_url)
 
-    def get_account(self, pubkey):
+    def get_account(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
 
         return self.client.get_account_info(pubkey)
+
+    def get_multiple_accounts(self, pubkeys: list):
+        if not pubkeys:
+            return []
+        
+        pubkeys = [normalize_pubkey(i) for i in pubkeys]
+        response = self.client.get_multiple_accounts(pubkeys, encoding="base64")
+        return response.value
+
     
     def get_lb_pair(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
@@ -507,12 +516,23 @@ class LbPair:
         return total_x, total_y
 
     def get_liquidity_in_arrays(self, arrays: list):
+        if not arrays:
+            return 0, 0
+        
         total_x = 0
         total_y = 0
+        pdas = []
 
         for index in arrays:            
             pda, bump = derive_bin_array_pda(self.address, index)
-            bin_array = self.client.get_bin_array(pda)
+            pdas.append(pda)
+
+        accounts = self.client.get_multiple_accounts(pdas)
+
+        for acc in accounts:
+            if acc is None:
+                continue
+            bin_array = BinArray(acc.data, self.client)
             x, y = bin_array.liquidity
             total_x += x
             total_y += y
@@ -522,9 +542,24 @@ class LbPair:
     @property
     def tvl(self):
         bin_arrays = self.bin_arrays_index_from_bitmap()
-        x, y = self.get_liquidity_in_arrays(bin_arrays)
+        total_x, total_y = self.get_liquidity_in_arrays(bin_arrays)
 
-        return x, y
+        x_mint, y_mint = self._load_tokens()
+        price = self.price
+
+        x = total_x / 10 ** x_mint.decimal
+        y = total_y / 10 ** y_mint.decimal
+
+        return {
+        "x_raw": total_x,
+        "y_raw": total_y,
+        "x": x,
+        "y": y,
+        "price_x_in_y": price,
+        "tvl_in_x": x + (y / price if price else 0),
+        "tvl_in_y": y + x * price,
+        "bin_arrays_count": len(bin_arrays)
+        }
 
     @property
     def price(self) -> float:
@@ -743,7 +778,13 @@ class PositionV2:
         x = amounts["x"]   
         y = amounts["y"]   
 
-        return y + x * price
+        value_in_x = x + (y / price if price else 0)  # в USDC
+        value_in_y = y + x * price                     # в SOL
+
+        return {        
+        "value_in_x": value_in_x,
+        "value_in_y": value_in_y,
+        }
        
 
     def in_range(self, active_id):
