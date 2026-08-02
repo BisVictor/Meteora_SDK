@@ -43,3 +43,11 @@ def get_bin_index(bin_id: int):
         bin_id = abs(bin_id) - 1
 
     return bin_id % 70
+
+def require_account(response, pubkey=None):
+    """Проверяет, что RPC вернул аккаунт."""
+    if response is None or response.value is None:
+        where = f" ({pubkey})" if pubkey is not None else ""
+        raise ValueError(f"Account not found{where}")
+    
+    return response

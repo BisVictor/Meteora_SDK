@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from typing import Dict, Tuple, Optional, List
 import os
 
-from .helpers import bin_id_to_bin_array_index, bin_array_index_from_bitmap, normalize_pubkey, get_bin_index
+from .helpers import bin_id_to_bin_array_index, bin_array_index_from_bitmap, normalize_pubkey, get_bin_index, require_account
 from .pda import PROGRAM_ID, derive_bin_array_pda, derive_position_pda, derive_position_bin_data_pda
 
 import struct
@@ -23,8 +23,9 @@ class  MeteoraRPC:
 
     def get_account(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
+        response = self.client.get_account_info(pubkey)
 
-        return self.client.get_account_info(pubkey)
+        return require_account(response, pubkey)
 
     def get_multiple_accounts(self, pubkeys: list):
         if not pubkeys:
@@ -32,20 +33,25 @@ class  MeteoraRPC:
         
         pubkeys = [normalize_pubkey(i) for i in pubkeys]
         response = self.client.get_multiple_accounts(pubkeys, encoding="base64")
+        if response is None or response.value is None:
+            raise ValueError("get_multiple_accounts failed")
+        
         return response.value
 
     
     def get_lb_pair(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
         response = self.client.get_account_info(pubkey)
+        account = require_account(response, pubkey)
 
-        return LbPair(response.value.data, pubkey, self)     
+        return LbPair(account.value.data, pubkey, self)     
 
     def get_position(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
         response = self.client.get_account_info(pubkey)
+        account = require_account(response, pubkey)
 
-        return PositionV2(response.value.data, self)  
+        return PositionV2(account.value.data, self)  
 
     def get_positions(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
@@ -59,11 +65,15 @@ class  MeteoraRPC:
                             )
                     ]
             )
+        if response is None or response.value is None:
+                    raise ValueError("get_multiple_accounts failed")
+        
         return [PositionV2(i.account.data, self) for i in response.value]
 
     def get_bin_array(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
         response = self.client.get_account_info(pubkey)
+        account = require_account(response, pubkey)
 
         return BinArray(response.value.data, self)  
     
