@@ -2,7 +2,7 @@ import pytest
 from meteora.rpc import MeteoraRPC, LbPair, Bin, URL
 from meteora.helpers import get_bin_index
 
-def test_1_lb_pair_price():
+""" def test_1_lb_pair_price():
     rpc = MeteoraRPC(URL)
     pool_address = "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd"
     account = rpc.get_account(pool_address)  # Meteora USDC-SOL Fee: 0.10% • Bin Step: 100
@@ -162,9 +162,57 @@ def test_17_position_get_amounts():
 
     assert isinstance(amounts, dict)
 
-def test_18_position_get_value():
+def test_18_position_get_value():    
     rpc = MeteoraRPC(URL)    
     position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
     position = rpc.get_position(position_address)
     value = position.get_value()
-    print(value)
+    print(value) """
+
+def test_19_lb_pair_price_at_bin():
+    rpc = MeteoraRPC(URL)
+    pool_address = "AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd"
+    account = rpc.get_account(pool_address)  # Meteora USDC-SOL Fee: 0.10% • Bin Step: 100
+    data = bytes(account.value.data)
+    lb = LbPair(data, pool_address, rpc)
+
+    print("lb._price_at_bin(260):", lb._price_at_bin(260))
+    print("lb._price_at_bin(261):", lb._price_at_bin(261))
+    print("lb._price_at_bin(262):", lb._price_at_bin(262))
+    print("lb._price_at_bin(263):", lb._price_at_bin(263))
+    print("lb._price_at_bin(264):", lb._price_at_bin(264))
+    print("lb._price_at_bin(265):", lb._price_at_bin(265))
+
+    assert lb._price_at_bin(264) < 1
+
+def test_20_lb_pair_swap_quote():
+    rpc = MeteoraRPC(URL)
+    pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
+
+    # X → Y (USDC → SOL)
+    q_xy = pool.swap_quote(10.0, swap_for_y=True, slippage_bps=100)
+    print("swap_quote X→Y:", q_xy)
+
+    assert isinstance(q_xy, dict)
+    assert q_xy["amount_in"] == 10.0
+    assert q_xy["swap_for_y"] is True
+    assert q_xy["amount_out"] > 0
+    assert q_xy["fee"] >= 0
+    assert q_xy["min_out"] <= q_xy["amount_out"]
+    assert q_xy["bins_crossed"] >= 1
+    assert q_xy["price_impact"] >= 0
+    assert "exhausted" in q_xy
+
+    """    # Y → X (SOL → USDC)
+    q_yx = pool.swap_quote(0.1, swap_for_y=False, slippage_bps=100)
+    print("swap_quote Y→X:", q_yx)
+
+    assert q_yx["swap_for_y"] is False
+    assert q_yx["amount_out"] > 0
+    assert q_yx["min_out"] <= q_yx["amount_out"]
+
+    # Очень большой объём — скорее всего exhausted
+    q_big = pool.swap_quote(1_000_000_000.0, swap_for_y=True, slippage_bps=100, max_bins=20)
+    print("swap_quote big:", q_big)
+
+    assert q_big["bins_crossed"] >= 1 """

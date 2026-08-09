@@ -16,8 +16,7 @@ URL = "https://api.mainnet-beta.solana.com"
 
 DISCRIMINATOR = 986681623081716513
 
-class  MeteoraRPC:
-    # Нет проверки response.value is None !!!
+class  MeteoraRPC:    
     def __init__(self, rpc_url: str):
         self.client = Client(rpc_url)
 
@@ -75,7 +74,7 @@ class  MeteoraRPC:
         response = self.client.get_account_info(pubkey)
         account = require_account(response, pubkey)
 
-        return BinArray(response.value.data, self)  
+        return BinArray(account.value.data, self)  
     
     def get_balance(self, pubkey: str | Pubkey):
         pubkey = normalize_pubkey(pubkey)
@@ -369,6 +368,9 @@ class LbPair:
         self.address = address
         self.client = client
 
+        self._x_mint = None
+        self._y_mint = None
+
         self.discriminator = r.u64()
 
         if self.discriminator != DISCRIMINATOR:
@@ -411,22 +413,28 @@ class LbPair:
         self.version = r.u8()
         self._reserved = r.skip(21)
 
-    def _load_tokens(self):        
-        self._token_x_mint = self.client.get_account(self.token_x_mint)
-        self._token_y_mint = self.client.get_account(self.token_y_mint)
+    def _load_tokens(self):
+        if self._x_mint is not None and self._y_mint is not None:
+            return self._x_mint, self._y_mint
 
-        self.x_mint = TokenMint(self._token_x_mint.value.data)
-        self.y_mint = TokenMint(self._token_y_mint.value.data)
+        x_acc = self.client.get_account(self.token_x_mint)
+        y_acc = self.client.get_account(self.token_y_mint)
 
-        return self.x_mint, self.y_mint      
+        self._x_mint = TokenMint(x_acc.value.data)
+        self._y_mint = TokenMint(y_acc.value.data)
+   
+        self.x_mint = self._x_mint
+        self.y_mint = self._y_mint
+        print("load_tokens is work")
+
+        return self._x_mint, self._y_mint   
     
     def get_bin(self, bin_id: int) -> Bin:
         """Выводит Bin из массива BinArray"""
         # проверить на отрицательные числа!!!
         array = self.get_bin_array(bin_id)
-        index = bin_id % 70
-        if index < 0:
-            index += 70
+        index = get_bin_index(bin_id)
+
         return array.bins[index]
     
     def get_bins(self, lower_bin_id: int, upper_bin_id: int):
@@ -548,6 +556,136 @@ class LbPair:
             total_y += y
 
         return total_x, total_y            
+
+    def swap_quote(
+        self,
+        amount_in: float,
+        swap_for_y: bool,
+        slippage_bps: int = 100,   # 100 = 1%
+        max_bins: int = 40,
+                    ) -> dict:
+        """
+        Preview свопа (упрощённый, human units).
+
+        amount_in   — UI units (например 100.0 USDC)
+        swap_for_y  — True: X→Y, False: Y→X
+        slippage_bps — допуск проскальзывания в basis points
+
+        Returns dict с amount_out, fee, min_out, impact, bins_crossed, exhausted.
+            """
+        if amount_in <= 0:
+            raise ValueError("amount_in must be > 0")
+
+        x_mint, y_mint = self._load_tokens()
+        x_dec, y_dec = x_mint.decimal, y_mint.decimal
+
+        # --- 1. Fee (упрощённо: одним куском от всего входа) ---        
+        fee_rate = max(self.total_fee, 0.0)
+        fee = amount_in * fee_rate
+        amount_left = amount_in - fee
+        if amount_left <= 0:
+            return {
+                "amount_in": amount_in,
+                "amount_out": 0.0,
+                "fee": fee,
+                "min_out": 0.0,
+                "bins_crossed": 0,
+                "swap_for_y": swap_for_y,
+                "exhausted": True,
+                "price_impact": 0.0,
+                "start_price": self.price,
+                "end_price": self.price,
+                "note": "amount_in too small after fee",
+            }
+
+        # --- 2. Старт ---
+        total_out = 0.0
+        bins_crossed = 0
+        bin_id = self.active_id
+        step = -1 if swap_for_y else 1  # X→Y вниз, Y→X вверх
+        start_price = self._price_at_bin(bin_id)
+        start_bin_used = None  # первый бин, где реально что-то съели
+
+        # --- 3. Проход по бинам ---
+        while amount_left > 1e-12 and bins_crossed < max_bins:
+            try:
+                b = self.get_bin(bin_id)
+            except Exception:
+                break
+
+            bin_x = b.amount_x / (10 ** x_dec)
+            bin_y = b.amount_y / (10 ** y_dec)
+            p = self._price_at_bin(bin_id)
+
+            if p <= 0:
+                bin_id += step
+                bins_crossed += 1
+                continue
+
+            if swap_for_y:
+                # X → Y: нужен Y в бине
+                if bin_y <= 0:
+                    bin_id += step
+                    bins_crossed += 1
+                    continue
+
+                # max X, который бин переварит: out_y = in_x * p  => in_x = bin_y / p
+                max_in = bin_y / p
+                used_in = min(amount_left, max_in)
+                out = used_in * p
+            else:
+                # Y → X: нужен X в бине
+                if bin_x <= 0:
+                    bin_id += step
+                    bins_crossed += 1
+                    continue
+
+                # out_x = in_y / p  => max_in_y = bin_x * p
+                max_in = bin_x * p
+                used_in = min(amount_left, max_in)
+                out = used_in / p
+
+            if used_in <= 0:
+                bin_id += step
+                bins_crossed += 1
+                continue
+
+            if start_bin_used is None:
+                start_bin_used = bin_id
+
+            amount_left -= used_in
+            total_out += out
+            bins_crossed += 1
+
+            if amount_left > 1e-12:
+                bin_id += step
+
+        # --- 4. Итоги ---
+        end_price = self._price_at_bin(bin_id)
+        if start_price > 0:
+            price_impact = abs(end_price - start_price) / start_price
+        else:
+            price_impact = 0.0
+
+        # min_out с учётом slippage (bps)
+        min_out = total_out * (1 - slippage_bps / 10_000)
+
+        return {
+            "amount_in": amount_in,
+            "amount_out": total_out,
+            "fee": fee,
+            "amount_left": amount_left,
+            "min_out": min_out,
+            "bins_crossed": bins_crossed,
+            "swap_for_y": swap_for_y,
+            "start_price": start_price,
+            "end_price": end_price,
+            "price_impact": price_impact,
+            "exhausted": amount_left > 1e-9,
+            "start_bin": start_bin_used,
+            "end_bin": bin_id,
+            "slippage_bps": slippage_bps,
+        }
     
     @property
     def tvl(self):
@@ -580,6 +718,16 @@ class LbPair:
 
         price = raw_price * 10 ** (x_mint.decimal - y_mint.decimal)
 
+        return price
+
+    def _price_at_bin(self, bin_id: int):
+        x_mint, y_mint = self._load_tokens()
+        raw_price = (
+                    1 + self.bin_step / 10_000
+                ) ** bin_id
+
+        price = raw_price * 10 ** (x_mint.decimal - y_mint.decimal)
+        
         return price
     
     @property
@@ -788,7 +936,7 @@ class PositionV2:
         x = amounts["x"]   
         y = amounts["y"]   
 
-        value_in_x = x + (y / price if price else 0)  # в USDC
+        value_in_x = x + (y / price if price else 0)   # в USDC
         value_in_y = y + x * price                     # в SOL
 
         return {        
@@ -803,7 +951,6 @@ class PositionV2:
             active_id <=
             self.upper_bin_id
         )
-
     
 
     @property
@@ -849,12 +996,12 @@ class PositionV2:
 #account = rpc.get_account("98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g") 
 #account = rpc.get_account("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo")
 
-rpc = MeteoraRPC(URL)
+#rpc = MeteoraRPC(URL)
 #pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
 #arrays = pool.bin_arrays_index_from_bitmap()
 #print(arrays)
 #print(pool.get_liquidity_in_arrays(arrays))
 
-position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
-position = rpc.get_position(position_address)
-position.get_amounts()
+#position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
+#position = rpc.get_position(position_address)
+#position.get_amounts()
