@@ -22,7 +22,7 @@ def test_2_lb_pair_fee_rate():
 
     print("lb.fee_rate:", lb.fee_rate)
 
-    assert lb.fee_rate == 0.1
+    assert lb.fee_rate == 0.001
 
 def test_3_lb_pair_variable_fee():
     rpc = MeteoraRPC(URL)
@@ -44,7 +44,7 @@ def test_4_lb_pair_total_fee():
 
     print("lb.total_fee:", lb.total_fee)
 
-    assert lb.total_fee >= 0.1
+    assert lb.total_fee >= 0.001
 
 def test_5_lb_pair_active_bin():
     rpc = MeteoraRPC(URL)
@@ -108,7 +108,7 @@ def test_11_lb_pair_get_bins():
     pool = rpc.get_lb_pair("AcQPrTHx3ggWau1yU1fe5mQ89HeqPTsEoWC7ejL67wfd")
     bin = pool.get_liquidity_in_range(260, 266)
 
-    print("pool.get_liquidity_in_range(100, 105)): ", bin)   
+    print("pool.get_liquidity_in_range(100, 105)): ", bin)    """
 
 def test_12_lb_pair_bin_arrays_index_from_bitmap():
     rpc = MeteoraRPC(URL)
@@ -167,7 +167,7 @@ def test_18_position_get_value():
     position_address = "4Rjkrs2p8n2kcTbd8KLTY3BQ9wtps4uaWjfmNfdvF4xq"
     position = rpc.get_position(position_address)
     value = position.get_value()
-    print(value) """
+    print(value) 
 
 def test_19_lb_pair_price_at_bin():
     rpc = MeteoraRPC(URL)

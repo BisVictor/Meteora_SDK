@@ -16,6 +16,9 @@ URL = "https://api.mainnet-beta.solana.com"
 
 DISCRIMINATOR = 986681623081716513
 
+FEE_PRECISION = 1_000_000_000
+MAX_FEE_RATE = 100_000_000  # 10%
+
 class  MeteoraRPC:    
     def __init__(self, rpc_url: str):
         self.client = Client(rpc_url)
@@ -730,7 +733,7 @@ class LbPair:
         
         return price
     
-    @property
+    """     @property
     def fee_rate(self):
 
         base_fee = (
@@ -738,9 +741,23 @@ class LbPair:
             self.bin_step
         )
 
-        return base_fee / 1_000_000
-    
+        return base_fee / 1_000_000 """
+
     @property
+    def fee_rate(self) -> float:
+        """Base fee как доля (0.001 = 0.1%)."""
+        return self.fee_rate_raw / FEE_PRECISION
+
+    @property
+    def variable_fee(self) -> float:
+        return self.variable_fee_raw / FEE_PRECISION
+
+    @property
+    def total_fee(self) -> float:
+        """Total fee как доля 0..1 для swap_quote."""
+        return self.total_fee_raw / FEE_PRECISION
+        
+    """     @property
     def variable_fee(self):
         v = self.v_parameters.volatility_accumulator
 
@@ -758,27 +775,41 @@ class LbPair:
         return (
             self.fee_rate +
             self.variable_fee
-        )
+        ) """
     
     @property
     def active_bin(self):
         return self.active_id
+
+    @property
+    def fee_rate_raw(self) -> int:
+        """Base fee в precision 1e9."""
+        p = self.parameters
+        return (
+            p.base_factor
+            * self.bin_step
+            * 10
+            * (10 ** p.base_fee_power_factor)
+        )
+
+    @property
+    def variable_fee_raw(self) -> int:
+        """Variable fee в precision 1e9."""
+        p = self.parameters
+        v = self.v_parameters.volatility_accumulator
+        if p.variable_fee_control == 0:
+            return 0
+        numer = p.variable_fee_control * (v * self.bin_step) ** 2
+        # ceil division
+        return (numer + 100_000_000_000 - 1) // 100_000_000_000
+
+    @property
+    def total_fee_raw(self) -> int:
+        total = self.fee_rate_raw + self.variable_fee_raw
+        return min(total, MAX_FEE_RATE)
     
   
-    """     @property
-    def min_price(self):
 
-        return (
-            1 + self.bin_step / 10000
-        ) ** self.parameters.min_bin_id
-    
-    @property
-    def max_price(self):
-
-        return (
-            1 + self.bin_step / 10000
-        ) ** self.parameters.max_bin_id
-     """
 
 
 
